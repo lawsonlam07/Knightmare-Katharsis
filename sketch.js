@@ -35,6 +35,25 @@ function setup() {
 	}
 }
 
+function drawArrow(x1, y1, x2, y2, ghost=false) {
+	if (!flip && !ghost) {[x1, y1, x2, y2] = [10-x1, 10-y1, 10-x2, 10-y2]}
+	else if (!flip && ghost) {[x1, y1] = [10-x1, 10-y1]}
+	let hypotenuse = Math.sqrt(Math.abs(x1-x2)**2 + Math.abs(y1-y2)**2)
+	let angle = Math.atan((y1-y2) / (x1-x2))
+	let xAvg = (x1+x2)/2
+	let yAvg = (y1+y2)/2
+
+	circle(x2 * decile, y2 * decile, decile/3)
+	circle(x2 * decile, y2 * decile, decile/2)
+
+	push()
+	translate(xAvg * decile, yAvg * decile)
+	rotate(angle)
+	translate(-xAvg * decile, -yAvg * decile)
+	rect(xAvg * decile, yAvg * decile, hypotenuse * decile + decile/4, decile/4, decile/8)
+	pop()
+}
+
 function drawBoard() {
 	push()
 	stroke(0, 0)
