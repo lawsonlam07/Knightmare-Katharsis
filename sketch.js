@@ -100,6 +100,25 @@ function drawPosFromFEN(fen) {
 	}
 }
 
+function initiateBoard(fen) {
+    let bufferArr = []
+    let boardArr = []
+    for (let char of fen) {
+    	if (char === "/") {
+        	boardArr.push([...bufferArr])
+      		bufferArr = []
+    	} else if (isNaN(Number(char))) {
+      		bufferArr.push(char)
+    	} else {
+        	for (let i = 0; i < Number(char); i++) {
+            	bufferArr.push("#")
+        	}
+    	}
+  	}
+ 	boardArr.push([...bufferArr])
+	return boardArr
+}
+
 function drawPosFromBoard() {
 	for (let x = 1; x <= 8; x++) {
 		for (let y = 1; y <= 8; y++) {
