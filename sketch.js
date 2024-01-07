@@ -7,6 +7,7 @@ let arrowSquares = []
 let pieces
 let decile
 let testText
+let board
 
 function preload() {
 	// Pieces by Cburnett - Own work, CC BY-SA 3.0
