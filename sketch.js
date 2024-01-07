@@ -100,6 +100,16 @@ function drawPosFromFEN(fen) {
 	}
 }
 
+function drawPosFromBoard() {
+	for (let x = 1; x <= 8; x++) {
+		for (let y = 1; y <= 8; y++) {
+			if (board[y-1][x-1] !== "#") {
+				image(pieces[board[y-1][x-1]], x*decile, y*decile, decile, decile)
+			}
+		}
+	}
+}
+
 function draw() {
 	createCanvas(windowWidth, windowHeight)
 	decile = Math.min(windowWidth, windowHeight) / 10
