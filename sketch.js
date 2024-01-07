@@ -34,6 +34,8 @@ function setup() {
 	for (let element of document.getElementsByClassName("p5Canvas")) {
 		element.addEventListener("contextmenu", v => v.preventDefault());
 	}
+
+	board = initiateBoard(startFEN)
 }
 
 function drawArrow(x1, y1, x2, y2, ghost=false) {
@@ -58,8 +60,8 @@ function drawArrow(x1, y1, x2, y2, ghost=false) {
 function drawBoard() {
 	push()
 	stroke(0, 0)
-	for (x = 1; x <= 8; x++) {
-		for (y = 1; y <= 8; y++) {
+	for (let x = 1; x <= 8; x++) {
+		for (let y = 1; y <= 8; y++) {
 			let rgb = (x+y) % 2 !== 0 ? [100, 50, 175] : [200, 150, 255]
 			fill(...rgb)
 			square((x*decile), (y*decile), decile)
@@ -72,8 +74,15 @@ function drawBoard() {
 		square(x*decile, y*decile, decile)
 	}
 
-	drawPosFromFEN(startFEN)
+	fill(173, 163, 83, 200)
+	if (mouseBuffer[2] === CENTER || (mouseIsPressed === true && mouseButton === LEFT) && mouseBuffer[0]) {
+		if (flip) {square(mouseBuffer[0] * decile, mouseBuffer[1] * decile, decile)}
+		else {square((9 - mouseBuffer[0]) * decile, (9 - mouseBuffer[1]) * decile, decile)}
+	}
 
+	drawPosFromBoard(startFEN)
+
+	fill(235, 64, 52, 200)
 	rectMode(CENTER)
 	for (let [x1, y1, x2, y2] of arrowSquares) {
 		drawArrow(x1, y1, x2, y2)
@@ -144,7 +153,15 @@ function keyPressed() {
 
 function mousePressed() {
 	[rank, file] = getRankandFileFromMouse(mouseX, mouseY)
-	mouseBuffer = [rank, file, mouseButton]
+
+	if (mouseBuffer[2] === CENTER) {
+		if ((mouseBuffer[0] !== rank || mouseBuffer[1] !== file) && mouseButton === LEFT) {
+			testText = [mouseBuffer[0], mouseBuffer[1], rank, file].join("")
+		}
+		mouseBuffer = [false, false, false]
+	} else {
+		mouseBuffer = [rank, file, mouseButton]
+	}
 }
 
 function mouseReleased() {
@@ -161,9 +178,14 @@ function mouseReleased() {
 		} else {
 			arrowSquares = arrowSquares.filter(v => v.join("") !== [mouseBuffer[0]+0.5, mouseBuffer[1]+0.5, rank+0.5, file+0.5].join(""))
 		}
-	} else if (mouseBuffer[2] === LEFT) {
+	} else if (mouseBuffer[2] === LEFT && (mouseBuffer[0] !== rank || mouseBuffer[1] !== file)) {
 		highlightSquares = []
 		arrowSquares = []
+		testText = [mouseBuffer[0], mouseBuffer[1], rank, file].join("")
+	} else if (mouseBuffer[2] === LEFT && (mouseBuffer[0] === rank && mouseBuffer[1] === file)) {
+		highlightSquares = []
+		arrowSquares = []
+		mouseBuffer[2] = CENTER
 	}
 }
 
