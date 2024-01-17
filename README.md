@@ -10,4 +10,4 @@ I release beta versions here:
 I am also working on a documentation website here:
 > https://codepen.io/Paracosm-Arcana/full/VwgodBK
 
-This project is made with [https://p5js.org/](p5.js), which is a JavaScript library.
+This project is made with [p5.js](https://p5js.org/), which is a JavaScript library.
