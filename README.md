@@ -4,7 +4,7 @@ This is a project (currently in development), where I will make a chess bot to p
 
 Currently, you can move the pieces, highlight squares and draw arrows. The next update will include move validation, and a simple bot.
 
-I release beta versions here:
+I release beta versions that you can play here:
 > https://pararcana.itch.io/chess-ai
 
 I am also working on a documentation website here:
