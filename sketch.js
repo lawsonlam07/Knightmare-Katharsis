@@ -6,6 +6,7 @@ let turn = true
 let highlightSquares = []
 let arrowSquares = []
 let moveHistory = []
+let knightOffsets = [[-2, -1], [-2, 1], [-1, -2], [-1, 2], [1, -2], [1, 2], [2, -1], [2, 1]]
 let pieces
 let decile
 let testText
@@ -50,17 +51,55 @@ function draw() {
 
 function keyPressed() {
 	if (key === "x") {flip = !flip}
-	else if (key === "r") {board = initiateBoard(startFEN); turn = true}
+	else if (key === "r") {board = initiateBoard(startFEN); turn = true; mouseBuffer = [false, false, false]}
 }
 
-function validateMove(piece, x1, y1, x2, y2) {
+function inBounds(x, y) {
+	return Math.max(x, y) < 9 && Math.min(x, y) > 0
+}
+
+function getColour(piece) {
+	return piece === piece.toUpperCase()
+}
+
+function getLegalMoves(x1, y1) {
+	let piece = board[y1 - 1][x1 - 1]
+	let colour = getColour(piece)
+	let validMoves = []
 	switch(piece.toUpperCase()) {
+		// Check Check
 		case "P":
-			return (Math.abs(y1-y2) === 1 || (Math.abs(y1-y2) === 2 && (y1 === 2 || y1 === 7)))
+			let double = colour ? 7 : 2
+			let dir = colour ? -1 : 1
+			if (inBounds(x1, y1 + dir) && board[y1+dir-1][x1-1] === "#") {
+				validMoves.push([x1, y1 + dir])
+				if (y1 === double && board[y1+(2*dir)-1][x1-1] === "#") {
+					validMoves.push([x1, y1 + (2 * dir)])
+				}
+			}
+			for (let i = -1; i <= 1; i += 2) {
+				let target = board[y1+dir-1][x1+i-1]
+				// check en passant here or smth (PIN CHECK)
+				// also check for promotion bozo
+				if (inBounds(x1+i, y1+dir) && getColour(target) !== colour && target !== "#") {
+					validMoves.push([x1 + i, y1 + dir])	
+				}
+			}
 			break
 
 		case "N":
-			return ((Math.abs(x1-x2) === 2 && Math.abs(y1-y2) === 1) || (Math.abs(x1-x2) === 1 && Math.abs(y1-y2) === 2))
+			// Check Pin
+			for (let [x, y] of knightOffsets) {
+				if (inBounds(x1+x, y1+y)) {
+					let target = board[y1+y-1][x1+x-1]
+					if (target === "#") {
+						validMoves.push([x1+x, y1+y])
+					} else if (getColour(target) !== colour) {
+						validMoves.push([x1+x, y1+y])
+						// capture
+					}
+				}
+			}
 			break
 
 		case "B":
@@ -79,13 +118,31 @@ function validateMove(piece, x1, y1, x2, y2) {
 			return (Math.max(Math.abs(x1-x2), Math.abs(y1-y2)) === 1)
 			break
 	}
+	return validMoves
 }
 
 function handleMove(x1, y1, x2, y2, piece) {
-	if (validateMove(piece, x1, y1, x2, y2)) {
+	let moves = getLegalMoves(x1, y1)
+
+	if (moves.some(v => v[0] === x2 && v[1] === y2)) {
 		turn = !turn
 		board[y2-1][x2-1] = board[y1-1][x1-1]
 		board[y1-1][x1-1] = "#"
+	}
+}
+
+function showLegalMoves() {
+	// Implement flip board
+	if (mouseBuffer[0] !== false) {
+		let target = board[mouseBuffer[1]-1][mouseBuffer[0]-1]
+		if ([CENTER, LEFT].includes(mouseBuffer[2]) && (getColour(target)) === turn) {
+			push()
+			fill(66, 135, 245, 100)
+			for (let [x, y] of getLegalMoves(mouseBuffer[0], mouseBuffer[1])) {
+				if (!flip) {[x, y] = [9-x, 9-y]}
+				circle((x + 0.5) * decile, (y + 0.5) * decile, decile/3)
+			} pop()
+		}
 	}
 }
 
@@ -104,6 +161,7 @@ function drawBoard() {
 	drawHighlightSquares()
 	drawClickedSquares()
 	drawPosFromBoard()
+	showLegalMoves()
 	//drawPosFromFEN(newFEN)
 	drawArrowSquares()
 
@@ -137,13 +195,13 @@ function mouseReleased() {
 
 	} else if (mouseBuffer[2] === LEFT && (mouseBuffer[0] !== rank || mouseBuffer[1] !== file)) {
 		let piece = board[mouseBuffer[1] - 1][mouseBuffer[0] - 1]
-		if ((piece === piece.toUpperCase()) === turn && piece !== "#") {
+		if (getColour(piece) === turn && piece !== "#") {
 			handleMove(mouseBuffer[0], mouseBuffer[1], rank, file, piece)
 		}
 
 	} else if (mouseBuffer[2] === LEFT && (mouseBuffer[0] === rank && mouseBuffer[1] === file)) {
 		let piece = board[file - 1][rank - 1]
-		if ((piece === piece.toUpperCase()) === turn && piece !== "#") {
+		if (getColour(piece) === turn && piece !== "#") {
 			mouseBuffer[2] = CENTER
 		}
 	}
