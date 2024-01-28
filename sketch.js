@@ -62,6 +62,57 @@ function getColour(piece) {
 	return piece === piece.toUpperCase()
 }
 
+function getHorizontalMoves(x1, y1) {
+	let validMoves = []
+	let colour = getColour(board[y1-1][x1-1])
+	let x; let y
+	for (let axis = 0; axis <= 1; axis++) {
+		axis = Boolean(axis)
+		for (let i = -1; i <= 1; i += 2) {
+			x = axis ? i : 0
+			y = !axis ? i : 0
+			while (inBounds(x1+x, y1+y)) {
+				let target = board[y1+y-1][x1+x-1]
+				if (target === "#") {
+					validMoves.push([x1+x, y1+y]) // Empty Square
+				} else if (getColour(target) !== colour) {
+					validMoves.push([x1+x, y1+y]) // Enemy Piece
+					break
+				} else { // Friendly Piece
+					break
+				}
+				x += axis ? i : 0
+				y += !axis ? i : 0
+			}
+		}
+	}
+	return validMoves
+}
+
+function getDiagonalMoves(x1, y1) {
+	let validMoves = []
+	let colour = getColour(board[y1-1][x1-1])
+	let x; let y
+	for (let i = -1; i <= 1; i += 2) {
+		for (let j = -1; j <= 1; j += 2) {
+			x = i; y = j
+			while (inBounds(x1+x, y1+y)) {
+				let target = board[y1+y-1][x1+x-1]
+				if (target === "#") {
+					validMoves.push([x1+x, y1+y]) // Empty Square
+				} else if (getColour(target) !== colour) {
+					validMoves.push([x1+x, y1+y]) // Enemy Piece
+					break
+				} else { // Friendly Piece
+					break
+				}
+				x += i; y += j
+			}
+		}
+	}
+	return validMoves
+}
+
 function getLegalMoves(x1, y1) {
 	let piece = board[y1 - 1][x1 - 1]
 	let colour = getColour(piece)
@@ -71,16 +122,15 @@ function getLegalMoves(x1, y1) {
 		case "P":
 			let double = colour ? 7 : 2
 			let dir = colour ? -1 : 1
-			if (inBounds(x1, y1 + dir) && board[y1+dir-1][x1-1] === "#") {
+			if (inBounds(x1, y1 + dir) && board[y1+dir-1][x1-1] === "#") { // Normal Forwards Moves
 				validMoves.push([x1, y1 + dir])
-				if (y1 === double && board[y1+(2*dir)-1][x1-1] === "#") {
+				if (y1 === double && board[y1+(2*dir)-1][x1-1] === "#") { // Double Move
 					validMoves.push([x1, y1 + (2 * dir)])
 				}
 			}
-			for (let i = -1; i <= 1; i += 2) {
+			for (let i = -1; i <= 1; i += 2) { // Capture Moves
 				let target = board[y1+dir-1][x1+i-1]
-				// check en passant here or smth (PIN CHECK)
-				// also check for promotion bozo
+				// Check for En Passant and Promotion here!
 				if (inBounds(x1+i, y1+dir) && getColour(target) !== colour && target !== "#") {
 					validMoves.push([x1 + i, y1 + dir])	
 				}
@@ -88,34 +138,41 @@ function getLegalMoves(x1, y1) {
 			break
 
 		case "N":
-			// Check Pin
 			for (let [x, y] of knightOffsets) {
 				if (inBounds(x1+x, y1+y)) {
 					let target = board[y1+y-1][x1+x-1]
-					if (target === "#") {
+					if (target === "#") { // Normal move
 						validMoves.push([x1+x, y1+y])
-					} else if (getColour(target) !== colour) {
+					} else if (getColour(target) !== colour) { // Capture
 						validMoves.push([x1+x, y1+y])
-						// capture
 					}
 				}
 			}
 			break
 
 		case "B":
-			return (Math.abs(x1-x2) === Math.abs(y1-y2))
+			validMoves = getDiagonalMoves(x1, y1)
 			break
 		
 		case "R":
-			return (Math.abs(x1-x2) === 0 || Math.abs(y1-y2) === 0)
+			validMoves = getHorizontalMoves(x1, y1)
 			break
 		
 		case "Q":
-			return ((Math.abs(x1-x2) === 0 || Math.abs(y1-y2) === 0) || (Math.abs(x1-x2) === 0 || Math.abs(y1-y2) === 0))
+			validMoves = getDiagonalMoves(x1, y1).concat(getHorizontalMoves(x1, y1))
 			break
 
 		case "K":
-			return (Math.max(Math.abs(x1-x2), Math.abs(y1-y2)) === 1)
+			for (let i = -1; i <= 1; i++) {
+				for (let j = -1; j <= 1; j++) {
+					if (inBounds(x1+i, y1+j)) {
+						let target = board[y1+j-1][x1+i-1]
+						if ((i !== 0 || j !== 0) && (getColour(target) !== colour || target === "#")) {
+							validMoves.push([x1+i, y1+j])
+						}
+					}
+				}
+			}
 			break
 	}
 	return validMoves
@@ -132,7 +189,6 @@ function handleMove(x1, y1, x2, y2, piece) {
 }
 
 function showLegalMoves() {
-	// Implement flip board
 	if (mouseBuffer[0] !== false) {
 		let target = board[mouseBuffer[1]-1][mouseBuffer[0]-1]
 		if ([CENTER, LEFT].includes(mouseBuffer[2]) && (getColour(target)) === turn) {
