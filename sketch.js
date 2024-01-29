@@ -275,7 +275,7 @@ function drawBoard() {
 	drawHighlightSquares()
 	drawClickedSquares()
 	drawPosFromBoard()
-	showLegalMoves()
+	//showLegalMoves()
 	//drawPosFromFEN(newFEN)
 	drawArrowSquares()
 
