@@ -3,6 +3,10 @@ let newFEN = "rn1qkb1r/pp2pppp/2p2n2/5b2/P1pP3N/2N5/1P2PPPP/R1BQKB1R"
 let mouseBuffer = [false, false, false]
 let flip = true
 let turn = true
+let whiteLeftRook = true
+let whiteRightRook = true
+let blackLeftRook = true
+let blackRightRook = true
 let highlightSquares = []
 let arrowSquares = []
 let moveHistory = []
@@ -34,11 +38,10 @@ function preload() {
 }
 
 function setup() {
+	board = initiateBoard(startFEN)
 	for (let element of document.getElementsByClassName("p5Canvas")) {
 		element.addEventListener("contextmenu", v => v.preventDefault());
 	}
-
-	board = initiateBoard(startFEN)
 }
 
 function draw() {
@@ -49,9 +52,21 @@ function draw() {
 	text(testText, mouseX, mouseY)
 }
 
+function resetGame() {
+	board = initiateBoard(startFEN)
+	mouseBuffer = [false, false, false]
+	highlightSquares = []
+	arrowSquares = []
+	whiteLeftRook = true
+	whiteRightRook = true
+	blackLeftRook = true
+	blackRightRook = true
+	turn = true
+}
+
 function keyPressed() {
 	if (key === "x") {flip = !flip}
-	else if (key === "r") {board = initiateBoard(startFEN); turn = true; mouseBuffer = [false, false, false]}
+	else if (key === "r") {resetGame()}
 }
 
 function inBounds(x, y) {
@@ -128,9 +143,9 @@ function getLegalMoves(x1, y1) {
 					validMoves.push([x1, y1 + (2 * dir)])
 				}
 			}
+
 			for (let i = -1; i <= 1; i += 2) { // Capture Moves
 				let target = board[y1+dir-1][x1+i-1]
-				// Check for En Passant and Promotion here!
 				if (inBounds(x1+i, y1+dir) && getColour(target) !== colour && target !== "#") {
 					validMoves.push([x1 + i, y1 + dir])	
 				}
@@ -173,6 +188,22 @@ function getLegalMoves(x1, y1) {
 					}
 				}
 			}
+			// check castling here
+			if (colour) { // Checks that every square between the king and rook is empty
+				if (whiteLeftRook && [board[7][1], board[7][2], board[7][3]].every(v => v === "#")) {
+					validMoves.push([x1-2, y1])
+				}
+				if (whiteRightRook && [board[7][5], board[7][6]].every(v => v === "#")) {
+					validMoves.push([x1+2, y1])
+				}
+			} else {
+				if (blackLeftRook && [board[0][1], board[0][2], board[0][3]].every(v => v === "#")) {
+					validMoves.push([x1-2, y1])
+				}
+				if (blackRightRook && [board[0][5], board[0][6]].every(v => v === "#")) {
+					validMoves.push([x1+2, y1])
+				}
+			}
 			break
 	}
 	return validMoves
@@ -180,11 +211,38 @@ function getLegalMoves(x1, y1) {
 
 function handleMove(x1, y1, x2, y2, piece) {
 	let moves = getLegalMoves(x1, y1)
+	let colour = getColour(piece)
 
 	if (moves.some(v => v[0] === x2 && v[1] === y2)) {
 		turn = !turn
 		board[y2-1][x2-1] = board[y1-1][x1-1]
 		board[y1-1][x1-1] = "#"
+
+		if (piece.toUpperCase() === "K") {
+			if (colour) {
+				whiteLeftRook = false
+				whiteRightRook = false
+			} else {
+				blackLeftRook = false
+				blackRightRook = false
+			}
+			if (Math.abs(x1-x2) === 2) {
+				board[y2-1][x1-x2 > 0 ? 3 : 5] = colour ? "R" : "r"
+				board[y2-1][x1-x2 > 0 ? 0 : 7] = "#"
+			}
+		} else if (piece.toUpperCase() === "P" && y2 === (colour ? 1 : 8)) { 
+			board[y2-1][x2-1] = colour ? "Q" : "q"
+		}
+
+		if ((x1 === 1 && y1 === 1) || (x2 === 1 && y2 === 1)) {
+			blackLeftRook = false
+		} else if ((x1 === 1 && y1 === 8) || (x2 === 1 && y2 === 8)) {
+			whiteLeftRook = false
+		} else if ((x1 === 8 && y1 === 1) || (x2 === 8 && y2 === 1)) {
+			blackRightRook = false
+		} else if ((x1 === 8 && y1 === 8) || (x2 === 8 && y2 === 8)) {
+			whiteRightRook = false
+		}
 	}
 }
 
