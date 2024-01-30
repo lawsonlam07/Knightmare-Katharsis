@@ -10,6 +10,7 @@ let blackRightRook = true
 let highlightSquares = []
 let arrowSquares = []
 let moveHistory = []
+let move = 0
 let knightOffsets = [[-2, -1], [-2, 1], [-1, -2], [-1, 2], [1, -2], [1, 2], [2, -1], [2, 1]]
 let pieces
 let decile
@@ -39,6 +40,7 @@ function preload() {
 
 function setup() {
 	board = initiateBoard(startFEN)
+	boardHistory = [initiateBoard(startFEN)]
 	for (let element of document.getElementsByClassName("p5Canvas")) {
 		element.addEventListener("contextmenu", v => v.preventDefault());
 	}
@@ -52,8 +54,72 @@ function draw() {
 	text(testText, mouseX, mouseY)
 }
 
+
+function drawBoard() {
+	push()
+	stroke(0, 0)
+
+	for (let x = 1; x <= 8; x++) {
+		for (let y = 1; y <= 8; y++) {
+			let rgb = (x+y) % 2 !== 0 ? [100, 50, 175] : [200, 150, 255]
+			fill(...rgb)
+			square((x*decile), (y*decile), decile)
+		}
+	}
+
+	drawHighlightSquares()
+	drawClickedSquares()
+	drawPosFromBoard(boardHistory[move])
+	showLegalMoves()
+	//drawPosFromFEN(newFEN)
+	drawArrowSquares()
+
+	pop()
+}
+
+function handleMove(x1, y1, x2, y2, piece) {
+	let moves = getLegalMoves(x1, y1)
+	let colour = getColour(piece)
+
+	if (moves.some(v => v[0] === x2 && v[1] === y2)) {
+		turn = !turn
+		board[y2-1][x2-1] = board[y1-1][x1-1]
+		board[y1-1][x1-1] = "#"
+
+		if (piece.toUpperCase() === "K") {
+			if (colour) {
+				whiteLeftRook = false
+				whiteRightRook = false
+			} else {
+				blackLeftRook = false
+				blackRightRook = false
+			}
+			if (Math.abs(x1-x2) === 2) {
+				board[y2-1][x1-x2 > 0 ? 3 : 5] = colour ? "R" : "r"
+				board[y2-1][x1-x2 > 0 ? 0 : 7] = "#"
+			}
+		} else if (piece.toUpperCase() === "P" && y2 === (colour ? 1 : 8)) { 
+			board[y2-1][x2-1] = colour ? "Q" : "q"
+		}
+
+		if ((x1 === 1 && y1 === 1) || (x2 === 1 && y2 === 1)) {
+			blackLeftRook = false
+		} else if ((x1 === 1 && y1 === 8) || (x2 === 1 && y2 === 8)) {
+			whiteLeftRook = false
+		} else if ((x1 === 8 && y1 === 1) || (x2 === 8 && y2 === 1)) {
+			blackRightRook = false
+		} else if ((x1 === 8 && y1 === 8) || (x2 === 8 && y2 === 8)) {
+			whiteRightRook = false
+		}
+		boardHistory.push(copyBoard(board))
+		move = boardHistory.length - 1
+	}
+}
+
 function resetGame() {
 	board = initiateBoard(startFEN)
+	boardHistory = [initiateBoard(startFEN)]
+	moveHistory = []
 	mouseBuffer = [false, false, false]
 	highlightSquares = []
 	arrowSquares = []
@@ -62,11 +128,37 @@ function resetGame() {
 	blackLeftRook = true
 	blackRightRook = true
 	turn = true
+	move = 0
 }
 
 function keyPressed() {
-	if (key === "x") {flip = !flip}
-	else if (key === "r") {resetGame()}
+	switch (key) {
+		case "x":
+			flip = !flip
+			break
+
+		case "r":
+			resetGame()
+			break
+
+		case "ArrowLeft":
+			move--
+			if (move === -1) {move = 0}
+			break
+
+		case "ArrowRight":
+			move++
+			if (move === boardHistory.length) {move = boardHistory.length - 1}
+			break
+
+		case "ArrowUp":
+			move = 0
+			break
+
+		case "ArrowDown":
+			move = boardHistory.length - 1
+			break
+	}
 }
 
 function inBounds(x, y) {
@@ -75,6 +167,13 @@ function inBounds(x, y) {
 
 function getColour(piece) {
 	return piece === piece.toUpperCase()
+}
+
+function copyBoard(board) {
+	let copy = []
+	for (let v of board) {
+		copy.push([...v])
+	} return copy
 }
 
 function getHorizontalMoves(x1, y1) {
@@ -209,43 +308,6 @@ function getLegalMoves(x1, y1) {
 	return validMoves
 }
 
-function handleMove(x1, y1, x2, y2, piece) {
-	let moves = getLegalMoves(x1, y1)
-	let colour = getColour(piece)
-
-	if (moves.some(v => v[0] === x2 && v[1] === y2)) {
-		turn = !turn
-		board[y2-1][x2-1] = board[y1-1][x1-1]
-		board[y1-1][x1-1] = "#"
-
-		if (piece.toUpperCase() === "K") {
-			if (colour) {
-				whiteLeftRook = false
-				whiteRightRook = false
-			} else {
-				blackLeftRook = false
-				blackRightRook = false
-			}
-			if (Math.abs(x1-x2) === 2) {
-				board[y2-1][x1-x2 > 0 ? 3 : 5] = colour ? "R" : "r"
-				board[y2-1][x1-x2 > 0 ? 0 : 7] = "#"
-			}
-		} else if (piece.toUpperCase() === "P" && y2 === (colour ? 1 : 8)) { 
-			board[y2-1][x2-1] = colour ? "Q" : "q"
-		}
-
-		if ((x1 === 1 && y1 === 1) || (x2 === 1 && y2 === 1)) {
-			blackLeftRook = false
-		} else if ((x1 === 1 && y1 === 8) || (x2 === 1 && y2 === 8)) {
-			whiteLeftRook = false
-		} else if ((x1 === 8 && y1 === 1) || (x2 === 8 && y2 === 1)) {
-			blackRightRook = false
-		} else if ((x1 === 8 && y1 === 8) || (x2 === 8 && y2 === 8)) {
-			whiteRightRook = false
-		}
-	}
-}
-
 function showLegalMoves() {
 	if (mouseBuffer[0] !== false) {
 		let target = board[mouseBuffer[1]-1][mouseBuffer[0]-1]
@@ -260,31 +322,9 @@ function showLegalMoves() {
 	}
 }
 
-function drawBoard() {
-	push()
-	stroke(0, 0)
-
-	for (let x = 1; x <= 8; x++) {
-		for (let y = 1; y <= 8; y++) {
-			let rgb = (x+y) % 2 !== 0 ? [100, 50, 175] : [200, 150, 255]
-			fill(...rgb)
-			square((x*decile), (y*decile), decile)
-		}
-	}
-
-	drawHighlightSquares()
-	drawClickedSquares()
-	drawPosFromBoard()
-	//showLegalMoves()
-	//drawPosFromFEN(newFEN)
-	drawArrowSquares()
-
-	pop()
-}
-
 function mousePressed() {
 	[rank, file] = getRankandFileFromMouse(mouseX, mouseY)
-	if (mouseButton === LEFT) {highlightSquares = []; arrowSquares = []}
+	if (mouseButton === LEFT) {highlightSquares = []; arrowSquares = []; move = boardHistory.length - 1}
 
 	if (rank && file) {
 		if (mouseBuffer[2] === CENTER && mouseButton === LEFT) {
@@ -403,7 +443,7 @@ function initiateBoard(fen) {
 	return boardArr
 }
 
-function drawPosFromBoard() {
+function drawPosFromBoard(board) {
 	let ghostX = false
 	let ghostY = false
 	for (let x = 1; x <= 8; x++) {
