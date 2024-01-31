@@ -11,6 +11,7 @@ let highlightSquares = []
 let arrowSquares = []
 let moveHistory = []
 let move = 0
+let alpha = []
 let knightOffsets = [[-2, -1], [-2, 1], [-1, -2], [-1, 2], [1, -2], [1, 2], [2, -1], [2, 1]]
 let pieces
 let decile
@@ -52,6 +53,19 @@ function draw() {
 
 	drawBoard()
 	text(testText, mouseX, mouseY)
+}
+
+function printHistory() {
+	let moves = document.createElement("textarea")
+	let moveList = []
+	for (let i = 0; i < moveHistory.length; i += 2) {
+		moveList.push(`${Math.floor(i/2)+1}. ${moveHistory.slice(i, i + 2).join(" ")}`)
+	}
+	document.body.appendChild(moves)
+	moves.value = moveList.join("     ")
+	moves.select()
+	document.execCommand("copy")
+	moves.remove()
 }
 
 
@@ -139,6 +153,10 @@ function keyPressed() {
 
 		case "r":
 			resetGame()
+			break
+
+		case "q":
+			printHistory()
 			break
 
 		case "ArrowLeft":
