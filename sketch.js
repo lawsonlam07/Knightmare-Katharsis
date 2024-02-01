@@ -62,6 +62,7 @@ function printHistory() {
 		moveList.push(`${Math.floor(i/2)+1}. ${moveHistory.slice(i, i + 2).join(" ")}`)
 	}
 	document.body.appendChild(moves)
+	testText = moveList.join("     ")
 	moves.value = moveList.join("     ")
 	moves.select()
 	document.execCommand("copy")
@@ -91,14 +92,22 @@ function drawBoard() {
 	pop()
 }
 
+function getNotation(x, y) {
+	return `${String.fromCharCode(96+x)}${9-y}`
+}
+
 function handleMove(x1, y1, x2, y2, piece) {
 	let moves = getLegalMoves(x1, y1)
 	let colour = getColour(piece)
+	let notation = piece.toUpperCase() === "P" ? "" : piece.toUpperCase()
 
 	if (moves.some(v => v[0] === x2 && v[1] === y2)) {
 		turn = !turn
+		notation += getNotation(x1, y1)
+		if (board[y2-1][x2-1] !== "#") {notation += "x"}
 		board[y2-1][x2-1] = board[y1-1][x1-1]
 		board[y1-1][x1-1] = "#"
+		notation += getNotation(x2, y2)
 
 		if (piece.toUpperCase() === "K") {
 			if (colour) {
@@ -109,11 +118,13 @@ function handleMove(x1, y1, x2, y2, piece) {
 				blackRightRook = false
 			}
 			if (Math.abs(x1-x2) === 2) {
+				notation = x1-x2 > 0 ? "O-O-O" : "O-O"
 				board[y2-1][x1-x2 > 0 ? 3 : 5] = colour ? "R" : "r"
 				board[y2-1][x1-x2 > 0 ? 0 : 7] = "#"
 			}
 		} else if (piece.toUpperCase() === "P" && y2 === (colour ? 1 : 8)) { 
 			board[y2-1][x2-1] = colour ? "Q" : "q"
+			notation += "q"
 		}
 
 		if ((x1 === 1 && y1 === 1) || (x2 === 1 && y2 === 1)) {
@@ -127,6 +138,7 @@ function handleMove(x1, y1, x2, y2, piece) {
 		}
 		boardHistory.push(copyBoard(board))
 		move = boardHistory.length - 1
+		moveHistory.push(notation)
 	}
 }
 
@@ -160,13 +172,11 @@ function keyPressed() {
 			break
 
 		case "ArrowLeft":
-			move--
-			if (move === -1) {move = 0}
+			move = Math.max(move-1, 0)
 			break
 
 		case "ArrowRight":
-			move++
-			if (move === boardHistory.length) {move = boardHistory.length - 1}
+			move = Math.min(move+1, boardHistory.length-1)
 			break
 
 		case "ArrowUp":
