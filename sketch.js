@@ -88,6 +88,7 @@ function drawBoard() {
 	showLegalMoves()
 	//drawPosFromFEN(newFEN)
 	drawArrowSquares()
+	//promotionUI(false)
 
 	pop()
 }
@@ -96,17 +97,44 @@ function getNotation(x, y) {
 	return `${String.fromCharCode(96+x)}${9-y}`
 }
 
+function promotionUI(colour) {
+	let queen = colour ? "Q" : "q"
+	let rook = colour ? "R" : "r"
+	let knight = colour ? "N" : "n"
+	let bishop = colour ? "B" : "b"
+	push()
+	imageMode(CENTER)
+	fill(66, 135, 245, 200)
+	rect(5*decile, 5*decile, 2.5*decile, 2.5*decile, 0.5*decile)
+	pop()
+	image(pieces[queen], 4*decile, 4*decile, decile, decile)
+	image(pieces[rook], 5*decile, 4*decile, decile, decile)
+	image(pieces[knight], 4*decile, 5*decile, decile, decile)
+	image(pieces[bishop], 5*decile, 5*decile, decile, decile)
+}
+
 function handleMove(x1, y1, x2, y2, piece) {
 	let moves = getLegalMoves(x1, y1)
 	let colour = getColour(piece)
 	let notation = piece.toUpperCase() === "P" ? "" : piece.toUpperCase()
 
 	if (moves.some(v => v[0] === x2 && v[1] === y2)) {
+		move = moves.filter(v => v[0] === x2 && v[1] === y2)[0]
 		turn = !turn
 		notation += getNotation(x1, y1)
 		if (board[y2-1][x2-1] !== "#") {notation += "x"}
 		board[y2-1][x2-1] = board[y1-1][x1-1]
 		board[y1-1][x1-1] = "#"
+		if (piece.toUpperCase() === "P") { 
+			if (y2 === (colour ? 1 : 8)) {
+				board[y2-1][x2-1] = colour ? "Q" : "q"
+				notation += "q"
+			} else if (move[2] === true) {
+				notation += "x"
+				board[y1-1][x2-1] = "#"
+			}
+		}
+
 		notation += getNotation(x2, y2)
 
 		if (piece.toUpperCase() === "K") {
@@ -122,9 +150,6 @@ function handleMove(x1, y1, x2, y2, piece) {
 				board[y2-1][x1-x2 > 0 ? 3 : 5] = colour ? "R" : "r"
 				board[y2-1][x1-x2 > 0 ? 0 : 7] = "#"
 			}
-		} else if (piece.toUpperCase() === "P" && y2 === (colour ? 1 : 8)) { 
-			board[y2-1][x2-1] = colour ? "Q" : "q"
-			notation += "q"
 		}
 
 		if ((x1 === 1 && y1 === 1) || (x2 === 1 && y2 === 1)) {
@@ -140,6 +165,90 @@ function handleMove(x1, y1, x2, y2, piece) {
 		move = boardHistory.length - 1
 		moveHistory.push(notation)
 	}
+}
+
+function getLegalMoves(x1, y1) {
+	let piece = board[y1 - 1][x1 - 1]
+	let colour = getColour(piece)
+	let validMoves = []
+	switch(piece.toUpperCase()) {
+		// Check Check
+		case "P":
+			let double = colour ? 7 : 2
+			let dir = colour ? -1 : 1
+			if (inBounds(x1, y1 + dir) && board[y1+dir-1][x1-1] === "#") { // Normal Forwards Moves
+				validMoves.push([x1, y1 + dir, false])
+				if (y1 === double && board[y1+(2*dir)-1][x1-1] === "#") { // Double Move
+					validMoves.push([x1, y1 + (2 * dir), false])
+				}
+			}
+
+			for (let i = -1; i <= 1; i += 2) { // Capture Moves
+				let target = board[y1+dir-1][x1+i-1]
+				let enPassant = getNotation(x1+i, 9-(double)) + getNotation(x1+i, 9-(double+2*dir))
+				if (inBounds(x1+i, y1+dir) && getColour(target) !== colour && target !== "#") {
+					validMoves.push([x1 + i, y1 + dir, false])
+				} else if (moveHistory[moveHistory.length-1] === enPassant && y1 === double+(3*dir)) {
+					validMoves.push([x1 + i, y1 + dir, true])
+				}
+			}
+			break
+
+		case "N":
+			for (let [x, y] of knightOffsets) {
+				if (inBounds(x1+x, y1+y)) {
+					let target = board[y1+y-1][x1+x-1]
+					if (target === "#") { // Normal move
+						validMoves.push([x1+x, y1+y])
+					} else if (getColour(target) !== colour) { // Capture
+						validMoves.push([x1+x, y1+y])
+					}
+				}
+			}
+			break
+
+		case "B":
+			validMoves = getDiagonalMoves(x1, y1)
+			break
+		
+		case "R":
+			validMoves = getHorizontalMoves(x1, y1)
+			break
+		
+		case "Q":
+			validMoves = getDiagonalMoves(x1, y1).concat(getHorizontalMoves(x1, y1))
+			break
+
+		case "K":
+			for (let i = -1; i <= 1; i++) {
+				for (let j = -1; j <= 1; j++) {
+					if (inBounds(x1+i, y1+j)) {
+						let target = board[y1+j-1][x1+i-1]
+						if ((i !== 0 || j !== 0) && (getColour(target) !== colour || target === "#")) {
+							validMoves.push([x1+i, y1+j])
+						}
+					}
+				}
+			}
+			// check castling here
+			if (colour) { // Checks that every square between the king and rook is empty
+				if (whiteLeftRook && [board[7][1], board[7][2], board[7][3]].every(v => v === "#")) {
+					validMoves.push([x1-2, y1])
+				}
+				if (whiteRightRook && [board[7][5], board[7][6]].every(v => v === "#")) {
+					validMoves.push([x1+2, y1])
+				}
+			} else {
+				if (blackLeftRook && [board[0][1], board[0][2], board[0][3]].every(v => v === "#")) {
+					validMoves.push([x1-2, y1])
+				}
+				if (blackRightRook && [board[0][5], board[0][6]].every(v => v === "#")) {
+					validMoves.push([x1+2, y1])
+				}
+			}
+			break
+	}
+	return validMoves
 }
 
 function resetGame() {
@@ -251,87 +360,6 @@ function getDiagonalMoves(x1, y1) {
 				x += i; y += j
 			}
 		}
-	}
-	return validMoves
-}
-
-function getLegalMoves(x1, y1) {
-	let piece = board[y1 - 1][x1 - 1]
-	let colour = getColour(piece)
-	let validMoves = []
-	switch(piece.toUpperCase()) {
-		// Check Check
-		case "P":
-			let double = colour ? 7 : 2
-			let dir = colour ? -1 : 1
-			if (inBounds(x1, y1 + dir) && board[y1+dir-1][x1-1] === "#") { // Normal Forwards Moves
-				validMoves.push([x1, y1 + dir])
-				if (y1 === double && board[y1+(2*dir)-1][x1-1] === "#") { // Double Move
-					validMoves.push([x1, y1 + (2 * dir)])
-				}
-			}
-
-			for (let i = -1; i <= 1; i += 2) { // Capture Moves
-				let target = board[y1+dir-1][x1+i-1]
-				if (inBounds(x1+i, y1+dir) && getColour(target) !== colour && target !== "#") {
-					validMoves.push([x1 + i, y1 + dir])	
-				}
-			}
-			break
-
-		case "N":
-			for (let [x, y] of knightOffsets) {
-				if (inBounds(x1+x, y1+y)) {
-					let target = board[y1+y-1][x1+x-1]
-					if (target === "#") { // Normal move
-						validMoves.push([x1+x, y1+y])
-					} else if (getColour(target) !== colour) { // Capture
-						validMoves.push([x1+x, y1+y])
-					}
-				}
-			}
-			break
-
-		case "B":
-			validMoves = getDiagonalMoves(x1, y1)
-			break
-		
-		case "R":
-			validMoves = getHorizontalMoves(x1, y1)
-			break
-		
-		case "Q":
-			validMoves = getDiagonalMoves(x1, y1).concat(getHorizontalMoves(x1, y1))
-			break
-
-		case "K":
-			for (let i = -1; i <= 1; i++) {
-				for (let j = -1; j <= 1; j++) {
-					if (inBounds(x1+i, y1+j)) {
-						let target = board[y1+j-1][x1+i-1]
-						if ((i !== 0 || j !== 0) && (getColour(target) !== colour || target === "#")) {
-							validMoves.push([x1+i, y1+j])
-						}
-					}
-				}
-			}
-			// check castling here
-			if (colour) { // Checks that every square between the king and rook is empty
-				if (whiteLeftRook && [board[7][1], board[7][2], board[7][3]].every(v => v === "#")) {
-					validMoves.push([x1-2, y1])
-				}
-				if (whiteRightRook && [board[7][5], board[7][6]].every(v => v === "#")) {
-					validMoves.push([x1+2, y1])
-				}
-			} else {
-				if (blackLeftRook && [board[0][1], board[0][2], board[0][3]].every(v => v === "#")) {
-					validMoves.push([x1-2, y1])
-				}
-				if (blackRightRook && [board[0][5], board[0][6]].every(v => v === "#")) {
-					validMoves.push([x1+2, y1])
-				}
-			}
-			break
 	}
 	return validMoves
 }
