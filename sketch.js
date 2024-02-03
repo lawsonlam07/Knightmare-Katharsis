@@ -17,6 +17,7 @@ let pieces
 let decile
 let testText
 let board
+//let mode = "board"
 
 function preload() {
 	// Pieces by Cburnett - Own work, CC BY-SA 3.0
@@ -97,7 +98,7 @@ function getNotation(x, y) {
 	return `${String.fromCharCode(96+x)}${9-y}`
 }
 
-function promotionUI(colour) {
+async function promotionUI(colour) {
 	let queen = colour ? "Q" : "q"
 	let rook = colour ? "R" : "r"
 	let knight = colour ? "N" : "n"
@@ -111,7 +112,13 @@ function promotionUI(colour) {
 	image(pieces[rook], 5*decile, 4*decile, decile, decile)
 	image(pieces[knight], 4*decile, 5*decile, decile, decile)
 	image(pieces[bishop], 5*decile, 5*decile, decile, decile)
+
+	return new Promise((resolve) => {
+		if (mouseIsPressed) {resolve(queen)} else {resolve(rook)}
+	})
+	return queen
 }
+
 
 function handleMove(x1, y1, x2, y2, piece) {
 	let moves = getLegalMoves(x1, y1)
@@ -127,8 +134,9 @@ function handleMove(x1, y1, x2, y2, piece) {
 		board[y1-1][x1-1] = "#"
 		if (piece.toUpperCase() === "P") { 
 			if (y2 === (colour ? 1 : 8)) {
-				board[y2-1][x2-1] = colour ? "Q" : "q"
-				notation += "q"
+				promo = promotionUI(colour)
+				board[y2-1][x2-1] = promo
+				notation += promo
 			} else if (move[2] === true) {
 				notation += "x"
 				board[y1-1][x2-1] = "#"
@@ -549,3 +557,4 @@ function getRankandFileFromMouse(x, y) {
 	}
 	return [false, false]
 }
+
