@@ -4,7 +4,6 @@ let mouseBuffer = [false, false, false]
 let flip = true
 let turn = true
 let whiteLeftRook = true
-
 let whiteRightRook = true
 let blackLeftRook = true
 let blackRightRook = true
@@ -117,7 +116,6 @@ function promotionUI() {
 	image(pieces[bishop], 5*decile, 5*decile, decile, decile)
 }
 
-
 function handleMove(x1, y1, x2, y2, piece) {
 	let moves = getLegalMoves(x1, y1)
 	let colour = getColour(piece)
@@ -133,9 +131,6 @@ function handleMove(x1, y1, x2, y2, piece) {
 			if (y2 === (colour ? 1 : 8)) {
 				mode = "promo"
 				promoSquare = [x2, y2]
-				// promo = promotionUI(colour)
-				// board[y2-1][x2-1] = promo
-				// notation += promo
 			} else if (move[2] === true) {
 				notation += "x"
 				board[y1-1][x2-1] = "#"
@@ -579,4 +574,3 @@ function getRankandFileFromMouse(x, y) {
 	}
 	return [false, false]
 }
-
