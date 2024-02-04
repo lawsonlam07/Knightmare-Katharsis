@@ -17,7 +17,8 @@ let pieces
 let decile
 let testText
 let board
-//let mode = "board"
+let promoSquare = [false, false]
+let mode = "board"
 
 function preload() {
 	// Pieces by Cburnett - Own work, CC BY-SA 3.0
@@ -86,9 +87,10 @@ function drawBoard() {
 	drawHighlightSquares()
 	drawClickedSquares()
 	drawPosFromBoard(boardHistory[move])
-	showLegalMoves()
+	if (mode !== "promo") {showLegalMoves()}
 	//drawPosFromFEN(newFEN)
 	drawArrowSquares()
+	if (mode === "promo") {promotionUI(false)}
 	//promotionUI(false)
 
 	pop()
@@ -98,11 +100,11 @@ function getNotation(x, y) {
 	return `${String.fromCharCode(96+x)}${9-y}`
 }
 
-async function promotionUI(colour) {
-	let queen = colour ? "Q" : "q"
-	let rook = colour ? "R" : "r"
-	let knight = colour ? "N" : "n"
-	let bishop = colour ? "B" : "b"
+function promotionUI() {
+	let queen = turn ? "Q" : "q"
+	let rook = turn ? "R" : "r"
+	let knight = turn ? "N" : "n"
+	let bishop = turn ? "B" : "b"
 	push()
 	imageMode(CENTER)
 	fill(66, 135, 245, 200)
@@ -112,11 +114,6 @@ async function promotionUI(colour) {
 	image(pieces[rook], 5*decile, 4*decile, decile, decile)
 	image(pieces[knight], 4*decile, 5*decile, decile, decile)
 	image(pieces[bishop], 5*decile, 5*decile, decile, decile)
-
-	return new Promise((resolve) => {
-		if (mouseIsPressed) {resolve(queen)} else {resolve(rook)}
-	})
-	return queen
 }
 
 
@@ -125,18 +122,19 @@ function handleMove(x1, y1, x2, y2, piece) {
 	let colour = getColour(piece)
 	let notation = piece.toUpperCase() === "P" ? "" : piece.toUpperCase()
 
-	if (moves.some(v => v[0] === x2 && v[1] === y2)) {
+	if (moves.some(v => v[0] === x2 && v[1] === y2) && mode !== "promo") {
 		move = moves.filter(v => v[0] === x2 && v[1] === y2)[0]
-		turn = !turn
 		notation += getNotation(x1, y1)
 		if (board[y2-1][x2-1] !== "#") {notation += "x"}
 		board[y2-1][x2-1] = board[y1-1][x1-1]
 		board[y1-1][x1-1] = "#"
 		if (piece.toUpperCase() === "P") { 
 			if (y2 === (colour ? 1 : 8)) {
-				promo = promotionUI(colour)
-				board[y2-1][x2-1] = promo
-				notation += promo
+				mode = "promo"
+				promoSquare = [x2, y2]
+				// promo = promotionUI(colour)
+				// board[y2-1][x2-1] = promo
+				// notation += promo
 			} else if (move[2] === true) {
 				notation += "x"
 				board[y1-1][x2-1] = "#"
@@ -172,6 +170,67 @@ function handleMove(x1, y1, x2, y2, piece) {
 		boardHistory.push(copyBoard(board))
 		move = boardHistory.length - 1
 		moveHistory.push(notation)
+		if (mode !== "promo") {turn = !turn}
+	}
+}
+
+function mousePressed() {
+	[rank, file] = getRankandFileFromMouse(mouseX, mouseY)
+	if (mouseButton === LEFT) {
+		highlightSquares = []; arrowSquares = []; move = boardHistory.length - 1
+		if (mode === "promo") {
+			if (Math.min(rank, file) >= 4 && Math.max(rank, file) <= 5) {
+				let piece
+				if (rank === 4 && file === 4) {
+					piece = turn ? "Q" : "q"
+				} else if (rank === 5 && file === 4) {
+					piece = turn ? "R" : "r"
+				} else if (rank === 4 && file === 5) {
+					piece = turn ? "N" : "n"
+				} else if (rank === 5 && file === 5) {
+					piece = turn ? "B" : "b"
+				}
+				board[promoSquare[1]-1][promoSquare[0]-1] = piece
+				boardHistory[boardHistory.length-1][promoSquare[1]-1][promoSquare[0]-1] = piece
+				moveHistory[moveHistory.length-1] += piece.toLowerCase()
+				mode = "board"
+				turn = !turn
+			}
+		}
+	}
+
+	if (rank && file) {
+		if (mouseBuffer[2] === CENTER && mouseButton === LEFT) {
+			if ((mouseBuffer[0] !== rank || mouseBuffer[1] !== file) && mouseButton === LEFT) {
+				let piece = board[mouseBuffer[1] - 1][mouseBuffer[0] - 1]
+				handleMove(mouseBuffer[0], mouseBuffer[1], rank, file, piece)
+			} mouseBuffer = [false, false, false]
+			
+		} else if (mouseButton !== LEFT || board[file-1][rank-1] !== "#") {
+			mouseBuffer = [rank, file, mouseButton]
+		} else {mouseBuffer = [false, false, false]}
+	} else {mouseBuffer = [false, false, false]}
+}
+
+function mouseReleased() {
+	[rank, file] = getRankandFileFromMouse(mouseX, mouseY)
+	if (mouseBuffer.join("") === [rank, file, RIGHT].join("") && rank && file) {
+		handleHighlightSquares()
+
+	} else if (mouseBuffer[2] === RIGHT && mouseBuffer[0] && mouseBuffer[1] && rank && file) {
+		handleArrowSquares()
+
+	} else if (mouseBuffer[2] === LEFT && (mouseBuffer[0] !== rank || mouseBuffer[1] !== file)) {
+		let piece = board[mouseBuffer[1] - 1][mouseBuffer[0] - 1]
+		if (getColour(piece) === turn && piece !== "#") {
+			handleMove(mouseBuffer[0], mouseBuffer[1], rank, file, piece)
+		}
+
+	} else if (mouseBuffer[2] === LEFT && (mouseBuffer[0] === rank && mouseBuffer[1] === file)) {
+		let piece = board[file - 1][rank - 1]
+		if (getColour(piece) === turn && piece !== "#") {
+			mouseBuffer[2] = CENTER
+		}
 	}
 }
 
@@ -270,6 +329,7 @@ function resetGame() {
 	whiteRightRook = true
 	blackLeftRook = true
 	blackRightRook = true
+	promoSquare = [false, false]
 	turn = true
 	move = 0
 }
@@ -382,45 +442,6 @@ function showLegalMoves() {
 				if (!flip) {[x, y] = [9-x, 9-y]}
 				circle((x + 0.5) * decile, (y + 0.5) * decile, decile/3)
 			} pop()
-		}
-	}
-}
-
-function mousePressed() {
-	[rank, file] = getRankandFileFromMouse(mouseX, mouseY)
-	if (mouseButton === LEFT) {highlightSquares = []; arrowSquares = []; move = boardHistory.length - 1}
-
-	if (rank && file) {
-		if (mouseBuffer[2] === CENTER && mouseButton === LEFT) {
-			if ((mouseBuffer[0] !== rank || mouseBuffer[1] !== file) && mouseButton === LEFT) {
-				let piece = board[mouseBuffer[1] - 1][mouseBuffer[0] - 1]
-				handleMove(mouseBuffer[0], mouseBuffer[1], rank, file, piece)
-			} mouseBuffer = [false, false, false]
-			
-		} else if (mouseButton !== LEFT || board[file-1][rank-1] !== "#") {
-			mouseBuffer = [rank, file, mouseButton]
-		} else {mouseBuffer = [false, false, false]}
-	} else {mouseBuffer = [false, false, false]}
-}
-
-function mouseReleased() {
-	[rank, file] = getRankandFileFromMouse(mouseX, mouseY)
-	if (mouseBuffer.join("") === [rank, file, RIGHT].join("") && rank && file) {
-		handleHighlightSquares()
-
-	} else if (mouseBuffer[2] === RIGHT && mouseBuffer[0] && mouseBuffer[1] && rank && file) {
-		handleArrowSquares()
-
-	} else if (mouseBuffer[2] === LEFT && (mouseBuffer[0] !== rank || mouseBuffer[1] !== file)) {
-		let piece = board[mouseBuffer[1] - 1][mouseBuffer[0] - 1]
-		if (getColour(piece) === turn && piece !== "#") {
-			handleMove(mouseBuffer[0], mouseBuffer[1], rank, file, piece)
-		}
-
-	} else if (mouseBuffer[2] === LEFT && (mouseBuffer[0] === rank && mouseBuffer[1] === file)) {
-		let piece = board[file - 1][rank - 1]
-		if (getColour(piece) === turn && piece !== "#") {
-			mouseBuffer[2] = CENTER
 		}
 	}
 }
