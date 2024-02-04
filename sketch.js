@@ -5,7 +5,6 @@ let flip = true
 let turn = true
 let whiteLeftRook = true
 let whiteRightRook = true
-
 let blackLeftRook = true
 let blackRightRook = true
 let highlightSquares = []
