@@ -87,7 +87,7 @@ function drawBoard() {
 	drawHighlightSquares()
 	drawClickedSquares()
 	drawPosFromBoard(boardHistory[move])
-	if (mode !== "promo") {showLegalMoves()}
+	if (mode === "board") {showLegalMoves()}
 	//drawPosFromFEN(newFEN)
 	drawArrowSquares()
 	if (mode === "promo") {promotionUI(false)}
@@ -121,7 +121,7 @@ function handleMove(x1, y1, x2, y2, piece) {
 	let colour = getColour(piece)
 	let notation = piece.toUpperCase() === "P" ? "" : piece.toUpperCase()
 
-	if (moves.some(v => v[0] === x2 && v[1] === y2) && mode !== "promo") {
+	if (moves.some(v => v[0] === x2 && v[1] === y2) && mode === "board") {
 		move = moves.filter(v => v[0] === x2 && v[1] === y2)[0]
 		notation += getNotation(x1, y1)
 		if (board[y2-1][x2-1] !== "#") {notation += "x"}
@@ -194,7 +194,7 @@ function mousePressed() {
 		}
 	}
 
-	if (rank && file) {
+	if (rank && file && mode === "board") {
 		if (mouseBuffer[2] === CENTER && mouseButton === LEFT) {
 			if ((mouseBuffer[0] !== rank || mouseBuffer[1] !== file) && mouseButton === LEFT) {
 				let piece = board[mouseBuffer[1] - 1][mouseBuffer[0] - 1]
