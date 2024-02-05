@@ -101,10 +101,10 @@ function getNotation(x, y) {
 }
 
 function promotionUI() {
-	let queen = turn ? "Q" : "q"
-	let rook = turn ? "R" : "r"
-	let knight = turn ? "N" : "n"
-	let bishop = turn ? "B" : "b"
+	let queen = !turn ? "Q" : "q"
+	let rook = !turn ? "R" : "r"
+	let knight = !turn ? "N" : "n"
+	let bishop = !turn ? "B" : "b"
 	push()
 	imageMode(CENTER)
 	fill(66, 135, 245, 200)
@@ -166,7 +166,7 @@ function handleMove(x1, y1, x2, y2, piece) {
 		boardHistory.push(copyBoard(board))
 		move = boardHistory.length - 1
 		moveHistory.push(notation)
-		if (mode !== "promo") {turn = !turn}
+		turn = !turn
 	}
 }
 
@@ -178,19 +178,18 @@ function mousePressed() {
 			if (Math.min(rank, file) >= 4 && Math.max(rank, file) <= 5) {
 				let piece
 				if (rank === 4 && file === 4) {
-					piece = turn ? "Q" : "q"
+					piece = !turn ? "Q" : "q"
 				} else if (rank === 5 && file === 4) {
-					piece = turn ? "R" : "r"
+					piece = !turn ? "R" : "r"
 				} else if (rank === 4 && file === 5) {
-					piece = turn ? "N" : "n"
+					piece = !turn ? "N" : "n"
 				} else if (rank === 5 && file === 5) {
-					piece = turn ? "B" : "b"
+					piece = !turn ? "B" : "b"
 				}
 				board[promoSquare[1]-1][promoSquare[0]-1] = piece
 				boardHistory[boardHistory.length-1][promoSquare[1]-1][promoSquare[0]-1] = piece
 				moveHistory[moveHistory.length-1] += piece.toLowerCase()
 				mode = "board"
-				turn = !turn
 			}
 		}
 	}
@@ -574,3 +573,4 @@ function getRankandFileFromMouse(x, y) {
 	}
 	return [false, false]
 }
+
