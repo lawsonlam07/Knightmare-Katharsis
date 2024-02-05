@@ -337,7 +337,7 @@ function keyPressed() {
 			break
 
 		case "r":
-			testText = "fuck"
+			testText = "oopd!"
 			resetGame()
 			break
 
