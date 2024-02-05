@@ -53,7 +53,7 @@ function draw() {
 	createCanvas(windowWidth, windowHeight)
 	decile = Math.min(windowWidth, windowHeight) / 10
 
-	drawBoard()
+	if (["board", "promo"].includes(mode)) {drawBoard()}
 	text(testText, mouseX, mouseY)
 }
 
@@ -87,9 +87,9 @@ function drawBoard() {
 	drawHighlightSquares()
 	drawClickedSquares()
 	drawPosFromBoard(boardHistory[move])
-	if (mode === "board") {showLegalMoves()}
-	//drawPosFromFEN(newFEN)
+	showLegalMoves()
 	drawArrowSquares()
+	//drawPosFromFEN(newFEN)
 	if (mode === "promo") {promotionUI(false)}
 	//promotionUI(false)
 
@@ -325,6 +325,7 @@ function resetGame() {
 	blackLeftRook = true
 	blackRightRook = true
 	promoSquare = [false, false]
+	mode === "board"
 	turn = true
 	move = 0
 }
@@ -336,6 +337,7 @@ function keyPressed() {
 			break
 
 		case "r":
+			testText = "fuck"
 			resetGame()
 			break
 
