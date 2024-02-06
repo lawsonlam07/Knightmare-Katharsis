@@ -18,7 +18,8 @@ let decile
 let testText
 let board
 let promoSquare = [false, false]
-let mode = "board"
+let mode = "menu"
+let bitboards = {}
 
 function preload() {
 	// Pieces by Cburnett - Own work, CC BY-SA 3.0
@@ -39,13 +40,18 @@ function preload() {
 	sfx = {
 		"boom": loadSound("SFX/boom.mp3")
 	}
+	songs = {
+		"checkmate": loadSound("Songs/checkmate.mp3")
+	}
 }
 
 function setup() {
+	// songs["checkmate"].loop()
 	board = initiateBoard(startFEN)
 	boardHistory = [initiateBoard(startFEN)]
+	getBitboards(startFEN)
 	for (let element of document.getElementsByClassName("p5Canvas")) {
-		element.addEventListener("contextmenu", v => v.preventDefault());
+		element.addEventListener("contextmenu", v => v.preventDefault())
 	}
 }
 
@@ -54,7 +60,24 @@ function draw() {
 	decile = Math.min(windowWidth, windowHeight) / 10
 
 	if (["board", "promo"].includes(mode)) {drawBoard()}
+	testText = bitboards["N"]
 	text(testText, mouseX, mouseY)
+}
+
+function getBitboards(fen) {
+	bitboards = {}
+	let x = 1; let y = 1
+	for (let char of fen) {
+		if (char === "/") {
+			x = 1; y++
+		} else if (isNaN(Number(char))) {
+			if (bitboards.hasOwnProperty(char)) {
+				bitboards[char].push([x, y])
+			} else {
+				bitboards[char] = [[x, y]]
+			} x++
+		} else {x += Number(char)}
+	}
 }
 
 function printHistory() {
@@ -90,7 +113,7 @@ function drawBoard() {
 	showLegalMoves()
 	drawArrowSquares()
 	//drawPosFromFEN(newFEN)
-	if (mode === "promo") {promotionUI(false)}
+	if (mode === "promo") {promotionUI()}
 	//promotionUI(false)
 
 	pop()
@@ -116,6 +139,12 @@ function promotionUI() {
 	image(pieces[bishop], 5*decile, 5*decile, decile, decile)
 }
 
+// let arr = [[5, 5], [5, 4], [4, 5]]
+
+// arr[arr.findIndex(v => v[0] === 4 && v[1] === 5)] = [6, 5]
+// arr = arr.filter(v => v[0] !== 5 || v[1] !== 5)
+// console.log(arr)
+
 function handleMove(x1, y1, x2, y2, piece) {
 	let moves = getLegalMoves(x1, y1)
 	let colour = getColour(piece)
@@ -125,10 +154,17 @@ function handleMove(x1, y1, x2, y2, piece) {
 		move = moves.filter(v => v[0] === x2 && v[1] === y2)[0]
 		notation += getNotation(x1, y1)
 		if (board[y2-1][x2-1] !== "#") {notation += "x"}
+
+		let capturedPiece = board[y2-1][x2-1]
+		if (capturedPiece !== "#") {
+			bitboards[capturedPiece] = bitboards[capturedPiece].filter(v => v[0] !== x2 || v[1] !== y2)
+		} bitboards[piece][bitboards[piece].findIndex(v => v[0] === x1 && v[1] === y1)] = [x2, y2]
+
 		board[y2-1][x2-1] = board[y1-1][x1-1]
 		board[y1-1][x1-1] = "#"
 		if (piece.toUpperCase() === "P") { 
 			if (y2 === (colour ? 1 : 8)) {
+				// add promo bitboard
 				mode = "promo"
 				promoSquare = [x2, y2]
 			} else if (move[2] === true) {
@@ -148,6 +184,7 @@ function handleMove(x1, y1, x2, y2, piece) {
 				blackRightRook = false
 			}
 			if (Math.abs(x1-x2) === 2) {
+				// add castling bitboard
 				notation = x1-x2 > 0 ? "O-O-O" : "O-O"
 				board[y2-1][x1-x2 > 0 ? 3 : 5] = colour ? "R" : "r"
 				board[y2-1][x1-x2 > 0 ? 0 : 7] = "#"
@@ -325,7 +362,8 @@ function resetGame() {
 	blackLeftRook = true
 	blackRightRook = true
 	promoSquare = [false, false]
-	mode === "board"
+	getBitboards(startFEN)
+	mode = "board"
 	turn = true
 	move = 0
 }
@@ -337,7 +375,6 @@ function keyPressed() {
 			break
 
 		case "r":
-			testText = "oopd!"
 			resetGame()
 			break
 
@@ -507,21 +544,21 @@ function drawPosFromFEN(fen) {
 }
 
 function initiateBoard(fen) {
-    let bufferArr = []
-    let boardArr = []
-    for (let char of fen) {
-    	if (char === "/") {
-        	boardArr.push([...bufferArr])
-      		bufferArr = []
-    	} else if (isNaN(Number(char))) {
-      		bufferArr.push(char)
-    	} else {
-        	for (let i = 0; i < Number(char); i++) {
-            	bufferArr.push("#")
-        	}
-    	}
-  	}
- 	boardArr.push([...bufferArr])
+	let bufferArr = []
+	let boardArr = []
+	for (let char of fen) {
+		if (char === "/") {
+			boardArr.push([...bufferArr])
+			bufferArr = []
+		} else if (isNaN(Number(char))) {
+			bufferArr.push(char)
+		} else {
+			for (let i = 0; i < Number(char); i++) {
+				bufferArr.push("#")
+			}
+		}
+	}
+	boardArr.push([...bufferArr])
 	return boardArr
 }
 
@@ -571,6 +608,7 @@ function getRankandFileFromMouse(x, y) {
 		let rank = Math.floor(x/decile)
 		let file = Math.floor(y/decile)
 		if (!flip) {rank = 9 - rank; file = 9 - file}
+		//testText = [rank, file, board[file-1][rank-1]]
 		return [rank, file]
 	}
 	return [false, false]
