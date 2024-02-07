@@ -49,7 +49,7 @@ function setup() {
 	// songs["checkmate"].loop()
 	board = initiateBoard(startFEN)
 	boardHistory = [initiateBoard(startFEN)]
-	getBitboards(startFEN)
+	bitboards = getBitboards(startFEN)
 	for (let element of document.getElementsByClassName("p5Canvas")) {
 		element.addEventListener("contextmenu", v => v.preventDefault())
 	}
@@ -64,8 +64,69 @@ function draw() {
 	text(testText, mouseX, mouseY)
 }
 
+function resetGame() {
+	board = initiateBoard(startFEN)
+	boardHistory = [initiateBoard(startFEN)]
+	moveHistory = []
+	mouseBuffer = [false, false, false]
+	highlightSquares = []
+	arrowSquares = []
+	whiteLeftRook = true
+	whiteRightRook = true
+	blackLeftRook = true
+	blackRightRook = true
+	promoSquare = [false, false]
+	bitboards = getBitboards(startFEN)
+	mode = "board"
+	turn = true
+	move = 0
+}
+
+class Chess {
+	constructor(fen) {
+		this.boardHistory = [initiateBoard(fen)]
+		this.bitboards = getBitboards(fen)
+		this.board = initiateBoard(fen)
+		this.promoSquare = [false, false]
+		this.whiteLeftRook = true
+		this.whiteRightRook = true
+		this.blackLeftRook = true
+		this.blackRightRook = true
+		this.highlightSquares = []
+		this.arrowSquares = []
+		this.moveHistory = []
+		this.mode = "board"
+		this.turn = true
+		this.move = 0
+	}
+
+	drawBoard() {
+		push()
+		stroke(0, 0)
+	
+		for (let x = 1; x <= 8; x++) {
+			for (let y = 1; y <= 8; y++) {
+				let rgb = (x+y) % 2 !== 0 ? [100, 50, 175] : [200, 150, 255]
+				fill(...rgb)
+				square((x*decile), (y*decile), decile)
+			}
+		}
+	
+		drawHighlightSquares()
+		drawClickedSquares()
+		drawPosFromBoard(boardHistory[move])
+		showLegalMoves()
+		drawArrowSquares()
+		//drawPosFromFEN(newFEN)
+		if (mode === "promo") {promotionUI()}
+		//promotionUI(false)
+	
+		pop()
+	}
+}
+
 function getBitboards(fen) {
-	bitboards = {}
+	let bitboards = {}
 	let x = 1; let y = 1
 	for (let char of fen) {
 		if (char === "/") {
@@ -78,6 +139,7 @@ function getBitboards(fen) {
 			} x++
 		} else {x += Number(char)}
 	}
+	return bitboards
 }
 
 function printHistory() {
@@ -350,24 +412,6 @@ function getLegalMoves(x1, y1) {
 	return validMoves
 }
 
-function resetGame() {
-	board = initiateBoard(startFEN)
-	boardHistory = [initiateBoard(startFEN)]
-	moveHistory = []
-	mouseBuffer = [false, false, false]
-	highlightSquares = []
-	arrowSquares = []
-	whiteLeftRook = true
-	whiteRightRook = true
-	blackLeftRook = true
-	blackRightRook = true
-	promoSquare = [false, false]
-	getBitboards(startFEN)
-	mode = "board"
-	turn = true
-	move = 0
-}
-
 function keyPressed() {
 	switch (key) {
 		case "x":
@@ -613,4 +657,5 @@ function getRankandFileFromMouse(x, y) {
 	}
 	return [false, false]
 }
+
 
