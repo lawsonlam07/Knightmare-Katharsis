@@ -20,6 +20,7 @@ let board
 let promoSquare = [false, false]
 let mode = "menu"
 let bitboards = {}
+let game
 
 function preload() {
 	// Pieces by Cburnett - Own work, CC BY-SA 3.0
@@ -53,13 +54,15 @@ function setup() {
 	for (let element of document.getElementsByClassName("p5Canvas")) {
 		element.addEventListener("contextmenu", v => v.preventDefault())
 	}
+	game = new Chess(startFEN)
 }
 
 function draw() {
 	createCanvas(windowWidth, windowHeight)
 	decile = Math.min(windowWidth, windowHeight) / 10
 
-	if (["board", "promo"].includes(mode)) {drawBoard()}
+	//if (["board", "promo"].includes(mode)) {drawBoard()}
+	game.draw()
 	testText = bitboards["N"]
 	text(testText, mouseX, mouseY)
 }
@@ -100,29 +103,93 @@ class Chess {
 		this.move = 0
 	}
 
-	drawBoard() {
+	draw() {
 		push()
 		stroke(0, 0)
-	
+		this.drawBoard()
+		//this.drawHighlightSquares()
+		//this.drawClickedSquares()
+		this.drawPosFromBoard()
+		//this.showLegalMoves()
+		//this.drawArrowSquares()
+		//if (mode === "promo") {this.promotionUI()}
+		pop()
+	}
+
+	drawBoard() {
 		for (let x = 1; x <= 8; x++) {
 			for (let y = 1; y <= 8; y++) {
 				let rgb = (x+y) % 2 !== 0 ? [100, 50, 175] : [200, 150, 255]
 				fill(...rgb)
 				square((x*decile), (y*decile), decile)
 			}
-		}
-	
-		drawHighlightSquares()
-		drawClickedSquares()
-		drawPosFromBoard(boardHistory[move])
-		showLegalMoves()
-		drawArrowSquares()
-		//drawPosFromFEN(newFEN)
-		if (mode === "promo") {promotionUI()}
-		//promotionUI(false)
-	
-		pop()
+		}	
 	}
+
+	drawHighlightSquares() {
+		fill(235, 64, 52, 200)
+		for (let [x, y] of highlightSquares) {
+			if (!flip) {[x, y] = [9-x, 9-y]}
+			square(x*decile, y*decile, decile)
+		}
+	}
+
+	drawClickedSquares() {
+		fill(173, 163, 83, 200)
+		if (mouseBuffer[2] === CENTER || (mouseIsPressed === true && mouseButton === LEFT) && mouseBuffer[0]) {
+			if (flip) {square(mouseBuffer[0] * decile, mouseBuffer[1] * decile, decile)}
+			else {square((9 - mouseBuffer[0]) * decile, (9 - mouseBuffer[1]) * decile, decile)}
+		}
+	}
+
+	drawPosFromBoard() {
+		let board = this.boardHistory[this.move]
+		let ghostX = false
+		let ghostY = false
+		for (let x = 1; x <= 8; x++) {
+			for (let y = 1; y <= 8; y++) {
+				let arrX = flip ? y-1 : 8-y
+				let arrY = flip ? x-1 : 8-x
+				if (board[arrX][arrY] !== "#") {
+					if ([LEFT, CENTER].includes(mouseBuffer[2]) && arrY+1 === mouseBuffer[0] && arrX+1 === mouseBuffer[1] && mouseIsPressed) {
+						ghostX = arrX
+						ghostY = arrY
+					} else {
+						image(pieces[board[arrX][arrY]], x*decile, y*decile, decile, decile)					
+					}
+				}
+			}
+		}
+		if (ghostX !== false && ghostY !== false) {
+			push()
+			imageMode(CENTER)
+			image(pieces[board[ghostX][ghostY]], mouseX, mouseY, decile, decile)
+			pop()	
+		}
+	}
+}
+
+function drawBoard() {
+	push()
+	stroke(0, 0)
+
+	for (let x = 1; x <= 8; x++) {
+		for (let y = 1; y <= 8; y++) {
+			let rgb = (x+y) % 2 !== 0 ? [100, 50, 175] : [200, 150, 255]
+			fill(...rgb)
+			square((x*decile), (y*decile), decile)
+		}
+	}
+
+	drawHighlightSquares()
+	drawClickedSquares()
+	drawPosFromBoard(boardHistory[move])
+	showLegalMoves()
+	drawArrowSquares()
+	//drawPosFromFEN(newFEN)
+	if (mode === "promo") {promotionUI()}
+	//promotionUI(false)
+	pop()
 }
 
 function getBitboards(fen) {
@@ -154,31 +221,6 @@ function printHistory() {
 	moves.select()
 	document.execCommand("copy")
 	moves.remove()
-}
-
-
-function drawBoard() {
-	push()
-	stroke(0, 0)
-
-	for (let x = 1; x <= 8; x++) {
-		for (let y = 1; y <= 8; y++) {
-			let rgb = (x+y) % 2 !== 0 ? [100, 50, 175] : [200, 150, 255]
-			fill(...rgb)
-			square((x*decile), (y*decile), decile)
-		}
-	}
-
-	drawHighlightSquares()
-	drawClickedSquares()
-	drawPosFromBoard(boardHistory[move])
-	showLegalMoves()
-	drawArrowSquares()
-	//drawPosFromFEN(newFEN)
-	if (mode === "promo") {promotionUI()}
-	//promotionUI(false)
-
-	pop()
 }
 
 function getNotation(x, y) {
