@@ -131,7 +131,7 @@ class Chess {
 	////////// Front End - User Interface //////////
 
 	draw() {
-		//this.highlightSquares = this.bitboards["R"]
+		// this.highlightSquares = this.bitboards["N"]
 		push()
 		stroke(0, 0)
 		this.drawBoard()
@@ -399,7 +399,7 @@ class Chess {
 		return pseudoLegalMoves
 	}
 
-	handleMove(x1, y1, x2, y2, piece) {
+	handleMove(x1, y1, x2, y2, piece, activeBoard) {
 		let moves = this.getLegalMoves(x1, y1)
 		let colour = this.getColour(piece)
 		let notation = piece.toUpperCase() === "P" ? "" : piece.toUpperCase()
@@ -407,15 +407,15 @@ class Chess {
 		if (moves.some(v => v[0] === x2 && v[1] === y2) && this.mode === "board") {
 			move = moves.filter(v => v[0] === x2 && v[1] === y2)[0]
 			notation += this.getNotation(x1, y1)
-			if (this.board[y2-1][x2-1] !== "#") {notation += "x"}
+			if (activeBoard[y2-1][x2-1] !== "#") {notation += "x"}
 	
-			let capturedPiece = this.board[y2-1][x2-1]
+			let capturedPiece = activeBoard[y2-1][x2-1]
 			if (capturedPiece !== "#") {
 				this.bitboards[capturedPiece] = this.bitboards[capturedPiece].filter(v => v[0] !== x2 || v[1] !== y2)
 			} this.bitboards[piece][this.bitboards[piece].findIndex(v => v[0] === x1 && v[1] === y1)] = [x2, y2]
 	
-			this.board[y2-1][x2-1] = this.board[y1-1][x1-1]
-			this.board[y1-1][x1-1] = "#"
+			activeBoard[y2-1][x2-1] = activeBoard[y1-1][x1-1]
+			activeBoard[y1-1][x1-1] = "#"
 			if (piece.toUpperCase() === "P") { 
 				if (y2 === (colour ? 1 : 8)) { // Promotion
 					this.mode = "promo"
@@ -423,9 +423,9 @@ class Chess {
 					this.bitboards[piece] = this.bitboards[piece].filter(v => v[0] !== x2 || v[1] !== y2)
 				} else if (move[2] === true) { // En Passant
 					notation += "x"
-					let capturedPawn = this.getColour(this.board[y1-1][x2-1]) ? "P" : "p"
+					let capturedPawn = this.getColour(activeBoard[y1-1][x2-1]) ? "P" : "p"
 					this.bitboards[capturedPawn] = this.bitboards[capturedPawn].filter(v => v[0] !== x2 || v[1] !== y1)
-					this.board[y1-1][x2-1] = "#"
+					activeBoard[y1-1][x2-1] = "#"
 				}
 			}
 	
@@ -447,8 +447,8 @@ class Chess {
 
 					this.bitboards[rook][this.bitboards[rook].findIndex(v => v[0] === rookOldX && v[1] === rookY)] = [rookNewX, rookY]
 					notation = x1-x2 > 0 ? "O-O-O" : "O-O"
-					this.board[y2-1][rookNewX-1] = rook
-					this.board[y2-1][rookOldX-1] = "#"
+					activeBoard[y2-1][rookNewX-1] = rook
+					activeBoard[y2-1][rookOldX-1] = "#"
 				}
 			}
 	
@@ -464,24 +464,20 @@ class Chess {
 			if (this.isCheck(...this.bitboards[this.turn ? "k" : "K"][0], !this.turn)) {
 				notation += "+"
 			}
-			this.boardHistory.push(this.copyBoard(this.board))
-			this.move = this.boardHistory.length - 1
-			this.moveHistory.push(notation)
-			this.turn = !this.turn
+			return [activeBoard, notation]
 		}
+		return false
 	}
 
 	isCheck(x1, y1, colour) {
 		let opposingKing = this.bitboards[colour ? "k" : "K"][0]
 		if (Math.max(Math.abs(x1-opposingKing[0]), Math.abs(y1-opposingKing[1])) === 1) {
-			testText = "illegal, king"
 			return true // Check by King
 		}
 
 		for (let [x, y] of this.bitboards[colour ? "q" : "Q"]) {
 			if ([x1-x, y1-y].some(v => v === 0) || Math.abs(x1-x) === Math.abs(y1-y)) {
 				if (this.tween(x, y, x1, y1).every(v => this.board[v[1]-1][v[0]-1] === "#")) {
-					testText = "illegal, queen"
 					return true // Check by Queen
 				}
 			}
@@ -490,7 +486,6 @@ class Chess {
 		for (let [x, y] of this.bitboards[colour ? "r" : "R"]) {
 			if ([x1-x, y1-y].some(v => v === 0)) {
 				if (this.tween(x, y, x1, y1).every(v => this.board[v[1]-1][v[0]-1] === "#")) {
-					testText = "illegal, rook"
 					return true // Check by Rook
 				}
 			}
@@ -499,7 +494,6 @@ class Chess {
 		for (let [x, y] of this.bitboards[colour ? "b" : "B"]) {
 			if (Math.abs(x1-x) === Math.abs(y1-y)) {
 				if (this.tween(x, y, x1, y1).every(v => this.board[v[1]-1][v[0]-1] === "#")) {
-					testText = "illegal, bishop"
 					return true // Check by Bishop
 				}
 			}
@@ -507,19 +501,15 @@ class Chess {
 
 		for (let [x, y] of this.bitboards[colour ? "n" : "N"]) {
 			if ([Math.abs(x1-x), Math.abs(y1-y)].sort().join("") === [1, 2].join("")) {
-				testText = "illegal, knight"
 				return true // Check by Knight
 			}
 		}
 
 		for (let [x, y] of this.bitboards[colour ? "p" : "P"]) {
 			if (Math.abs(x1-x) === 1 && y1 === y + (colour ? 1 : -1)) {
-				testText = "illegal, pawn"
 				return true // Check by Pawn
 			}
-		}
-		testText = "legal"
-		return false
+		} return false
 	}
 }
 
@@ -566,8 +556,10 @@ function mousePressed() {
 				game.bitboards[piece].push([game.promoSquare[0], game.promoSquare[1]])
 				game.board[game.promoSquare[1]-1][game.promoSquare[0]-1] = piece
 				game.boardHistory[game.boardHistory.length-1][game.promoSquare[1]-1][game.promoSquare[0]-1] = piece
-				game.moveHistory[game.moveHistory.length-1] += piece.toLowerCase()
-				game.mode = "board"
+				game.moveHistory[game.moveHistory.length-1] += "=" + piece.toUpperCase()
+				if (game.isCheck(...game.bitboards[!game.turn ? "k" : "K"][0], game.turn)) {
+					game.moveHistory[game.moveHistory.length-1] += "+"
+				} game.mode = "board"
 			}
 		}
 	}
@@ -576,7 +568,15 @@ function mousePressed() {
 		if (mouseBuffer[2] === CENTER && mouseButton === LEFT) {
 			if ((mouseBuffer[0] !== rank || mouseBuffer[1] !== file) && mouseButton === LEFT) {
 				let piece = game.board[mouseBuffer[1] - 1][mouseBuffer[0] - 1]
-				game.handleMove(mouseBuffer[0], mouseBuffer[1], rank, file, piece)
+				let move = game.handleMove(mouseBuffer[0], mouseBuffer[1], rank, file, piece, game.copyBoard(game.board))
+				if (move) {
+					game.board = move[0] // if success
+					game.boardHistory.push(move[0])
+					game.move = game.boardHistory.length - 1
+					game.turn = !game.turn
+					game.moveHistory.push(move[1])
+				}
+
 			} mouseBuffer = [false, false, false]
 			
 		} else if (mouseButton !== LEFT || game.board[file-1][rank-1] !== "#") {
@@ -602,7 +602,14 @@ function mouseReleased() {
 	} else if (mouseBuffer[2] === LEFT && (mouseBuffer[0] !== rank || mouseBuffer[1] !== file)) { // Handle Move
 		let piece = game.board[mouseBuffer[1] - 1][mouseBuffer[0] - 1]
 		if (game.getColour(piece) === game.turn && piece !== "#") {
-			game.handleMove(mouseBuffer[0], mouseBuffer[1], rank, file, piece)
+			let move = game.handleMove(mouseBuffer[0], mouseBuffer[1], rank, file, piece, game.copyBoard(game.board))
+			if (move) {
+				game.board = move[0] // if success
+				game.boardHistory.push(move[0])
+				game.move = game.boardHistory.length - 1
+				game.turn = !game.turn
+				game.moveHistory.push(move[1])
+			}
 		}
 
 	} else if (mouseBuffer[2] === LEFT && (mouseBuffer[0] === rank && mouseBuffer[1] === file)) { // Possible Move
