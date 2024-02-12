@@ -4,7 +4,6 @@ let randomFEN = "bbrknnqr/pppppppp/8/8/8/8/PPPPPPPP/BBRKNNQR"
 let mouseBuffer = [false, false, false]
 let flip = true
 let mode = "game"
-
 let decile
 let game
 
