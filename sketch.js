@@ -1,11 +1,10 @@
 let startFEN = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR"
 let newFEN = "rn1qkb1r/pp2pppp/2p2n2/5b2/P1pP3N/2N5/1P2PPPP/R1BQKB1R"
 let randomFEN = "bbrknnqr/pppppppp/8/8/8/8/PPPPPPPP/BBRKNNQR"
+
 let mouseBuffer = [false, false, false]
-let flip = true
 let mode = "game"
-let decile
-let game
+let decile, game
 
 let testText
 
@@ -26,7 +25,8 @@ function preload() {
         "P": loadImage("Pieces/wPawn.png")
     }
 	sfx = {
-		"boom": loadSound("SFX/boom.mp3")
+		"check": loadSound("SFX/check.mp3"),
+		"move": loadSound("SFX/move.mp3")
 	}
 	songs = {
 		"checkmate": loadSound("Songs/checkmate.mp3")
@@ -34,7 +34,7 @@ function preload() {
 }
 
 function setup() {
-	//songs["checkmate"].loop()
+	// songs["checkmate"].loop()
 	game = new Chess(startFEN)
 	for (let element of document.getElementsByClassName("p5Canvas")) {
 		element.addEventListener("contextmenu", v => v.preventDefault())
@@ -43,6 +43,7 @@ function setup() {
 
 function draw() {
 	createCanvas(windowWidth, windowHeight)
+	background(25)
 	decile = Math.min(windowWidth, windowHeight) / 10
 
 	game.draw()
@@ -55,15 +56,13 @@ class Chess {
 		this.bitboards = this.getBitboards(fen)
 		this.board = this.initiateBoard(fen)
 		this.promoSquare = [false, false]
-		this.whiteLeftRook = true
-		this.whiteRightRook = true
-		this.blackLeftRook = true
-		this.blackRightRook = true
+		this.canCastle = [true, true, true, true]
 		this.highlightSquares = []
 		this.arrowSquares = []
 		this.moveHistory = []
 		this.mode = "board"
 		this.turn = true
+		this.flip = true
 		this.move = 0
 		// this.rookStartX = [this.bitboards["R"][0][0], this.bitboards["R"][1][0]]
 	}
@@ -117,6 +116,13 @@ class Chess {
 		} return copy
 	}
 
+	copyBitboard(bitboard) {
+		let copy = []
+		for (let v in bitboard) {
+			copy[v] = [...bitboard[v]]
+		} return copy
+	}
+
 	tween(x1, y1, x2, y2) {
 		let xIncre = x2-x1 ? Math.floor((x2-x1) / Math.abs(x2-x1)) : 0
 		let yIncre = y2-y1 ? Math.floor((y2-y1) / Math.abs(y2-y1)) : 0
@@ -130,10 +136,11 @@ class Chess {
 
 	////////// Front End - User Interface //////////
 
-	draw() {
-		// this.highlightSquares = this.bitboards["N"]
+	draw() { // Where it all happens...
+		// this.highlightSquares = this.bitboards["P"]
 		push()
 		stroke(0, 0)
+		this.drawShadow()
 		this.drawBoard()
 		this.drawHighlightSquares()
 		this.drawClickedSquares()
@@ -154,10 +161,18 @@ class Chess {
 		}	
 	}
 
+	drawShadow() {
+		push()
+		fill(0)
+		rectMode(CORNER)
+		square(decile*1.125, decile*1.125, decile*8)
+		pop()
+	}
+
 	drawHighlightSquares() {
 		fill(235, 64, 52, 200)
 		for (let [x, y] of this.highlightSquares) {
-			if (!flip) {[x, y] = [9-x, 9-y]}
+			if (!this.flip) {[x, y] = [9-x, 9-y]}
 			square(x*decile, y*decile, decile)
 		}
 	}
@@ -165,7 +180,7 @@ class Chess {
 	drawClickedSquares() {
 		fill(173, 163, 83, 200)
 		if (mouseBuffer[2] === CENTER || (mouseIsPressed === true && mouseButton === LEFT) && mouseBuffer[0]) {
-			if (flip) {square(mouseBuffer[0] * decile, mouseBuffer[1] * decile, decile)}
+			if (this.flip) {square(mouseBuffer[0] * decile, mouseBuffer[1] * decile, decile)}
 			else {square((9 - mouseBuffer[0]) * decile, (9 - mouseBuffer[1]) * decile, decile)}
 		}
 	}
@@ -176,8 +191,8 @@ class Chess {
 		let ghostY = false
 		for (let x = 1; x <= 8; x++) {
 			for (let y = 1; y <= 8; y++) {
-				let arrX = flip ? y-1 : 8-y
-				let arrY = flip ? x-1 : 8-x
+				let arrX = this.flip ? y-1 : 8-y
+				let arrY = this.flip ? x-1 : 8-x
 				if (board[arrX][arrY] !== "#") {
 					if ([LEFT, CENTER].includes(mouseBuffer[2]) && arrY+1 === mouseBuffer[0] && arrX+1 === mouseBuffer[1] && mouseIsPressed) {
 						ghostX = arrX
@@ -196,8 +211,8 @@ class Chess {
 	}
 
 	drawArrow(x1, y1, x2, y2, ghost=false) {
-		if (!flip && !ghost) {[x1, y1, x2, y2] = [10-x1, 10-y1, 10-x2, 10-y2]}
-		else if (!flip && ghost) {[x1, y1] = [10-x1, 10-y1]}
+		if (!this.flip && !ghost) {[x1, y1, x2, y2] = [10-x1, 10-y1, 10-x2, 10-y2]}
+		else if (!this.flip && ghost) {[x1, y1] = [10-x1, 10-y1]}
 		let hypotenuse = Math.sqrt(Math.abs(x1-x2)**2 + Math.abs(y1-y2)**2)
 		let angle = Math.atan((y1-y2) / (x1-x2))
 		let xAvg = (x1+x2)/2
@@ -243,6 +258,16 @@ class Chess {
 
 	////////// Back End - Move Validation //////////
 
+	updateAttributes(move) {
+		this.board = move[0]
+		this.boardHistory.push(move[0])
+		this.canCastle = move[1]
+		this.bitboards = move[2]
+		this.moveHistory.push(move[3])
+		this.move = this.boardHistory.length - 1
+		this.turn = !this.turn
+	}
+
 	showLegalMoves() {
 		if ((mouseBuffer[2] === CENTER || (mouseIsPressed === true && mouseButton === LEFT) && mouseBuffer[0]) && this.mode === "board") {
 			let target = this.board[mouseBuffer[1]-1][mouseBuffer[0]-1]
@@ -250,7 +275,7 @@ class Chess {
 				push()
 				fill(66, 135, 245, 100)
 				for (let [x, y] of this.getLegalMoves(mouseBuffer[0], mouseBuffer[1])) {
-					if (!flip) {[x, y] = [9-x, 9-y]}
+					if (!this.flip) {[x, y] = [9-x, 9-y]}
 					circle((x + 0.5) * decile, (y + 0.5) * decile, decile/3)
 				} pop()
 			}
@@ -374,78 +399,81 @@ class Chess {
 						}
 					}
 				}
-				if (colour) { // Checks that every square between the king and rook is empty; AMEND FOR CHESS960
-					if (this.whiteLeftRook && this.tween(5, 8, 1, 8).every(v => this.board[v[1]-1][v[0]-1] === "#")) {// || v[0] === this.rookStartX[0] || v[0] === this.bitboards["K"][0][0])) {
-						pseudoLegalMoves.push([x1-2, y1])
+				if (colour) { // Checks that every square between the king and rook is empty; AMEND FOR CHESS960 // || v[0] === this.rookStartX[0] || v[0] === this.bitboards["K"][0][0])) {
+					if (this.canCastle[0] && this.tween(5, 8, 1, 8).every(v => this.board[v[1]-1][v[0]-1] === "#" && !this.isCheck(v[0], v[1], colour, this.bitboards, this.board))) {
+						pseudoLegalMoves.push([x1-2, y1]) // Check if the player is castling through check, NOTE THAT THE CASTLING THROUGH CHECK BIT IS HARDCODED
 					}
-					if (this.whiteRightRook && this.tween(5, 8, 8, 8).every(v => this.board[v[1]-1][v[0]-1] === "#")) {
+					if (this.canCastle[1] && this.tween(5, 8, 8, 8).every(v => this.board[v[1]-1][v[0]-1] === "#" && !this.isCheck(v[0], v[1], colour, this.bitboards, this.board))) {
 						pseudoLegalMoves.push([x1+2, y1])
 					}
 				} else {
-					if (this.blackLeftRook && this.tween(5, 1, 1, 1).every(v => this.board[v[1]-1][v[0]-1] === "#")) {
+					if (this.canCastle[2] && this.tween(5, 1, 1, 1).every(v => this.board[v[1]-1][v[0]-1] === "#" && !this.isCheck(v[0], v[1], colour, this.bitboards, this.board))) {
 						pseudoLegalMoves.push([x1-2, y1])
 					}
-					if (this.blackRightRook && this.tween(5, 1, 8, 1).every(v => this.board[v[1]-1][v[0]-1] === "#")) {
+					if (this.canCastle[3] && this.tween(5, 1, 8, 1).every(v => this.board[v[1]-1][v[0]-1] === "#" && !this.isCheck(v[0], v[1], colour, this.bitboards, this.board))) {
 						pseudoLegalMoves.push([x1+2, y1])
 					}
 				}
 				break
 		}
 
-		for (let v in pseudoLegalMoves) {
-			// v[0] => x2, v[1] => y2
-		}
-
-		return pseudoLegalMoves
+		for (let v of pseudoLegalMoves) { // Final Move Validation
+			let newBoard = this.handleMove(x1, y1, v[0], v[1], piece, this.copyBitboard(this.bitboards), this.copyBoard(this.board), [...this.canCastle], true)
+			if (!this.isCheck(...newBoard[2][this.turn ? "K" : "k"][0], colour, newBoard[2], newBoard[0])) {
+				legalMoves.push([v[0], v[1]])
+			}
+		} return legalMoves
 	}
 
-	handleMove(x1, y1, x2, y2, piece, activeBoard) {
-		let moves = this.getLegalMoves(x1, y1)
+	handleMove(x1, y1, x2, y2, piece, locator, activeBoard, castleArr, query=false) {
+		let moves = query ? [[x2, y2]] : this.getLegalMoves(x1, y1)
 		let colour = this.getColour(piece)
 		let notation = piece.toUpperCase() === "P" ? "" : piece.toUpperCase()
 	
-		if (moves.some(v => v[0] === x2 && v[1] === y2) && this.mode === "board") {
-			move = moves.filter(v => v[0] === x2 && v[1] === y2)[0]
+		if (moves.some(v => v[0] === x2 && v[1] === y2) && this.mode === "board") { // Valid Moves
+			if (!query) {sfx["move"].play()}
 			notation += this.getNotation(x1, y1)
 			if (activeBoard[y2-1][x2-1] !== "#") {notation += "x"}
 	
 			let capturedPiece = activeBoard[y2-1][x2-1]
 			if (capturedPiece !== "#") {
-				this.bitboards[capturedPiece] = this.bitboards[capturedPiece].filter(v => v[0] !== x2 || v[1] !== y2)
-			} this.bitboards[piece][this.bitboards[piece].findIndex(v => v[0] === x1 && v[1] === y1)] = [x2, y2]
+				locator[capturedPiece] = locator[capturedPiece].filter(v => v[0] !== x2 || v[1] !== y2)
+			} locator[piece][locator[piece].findIndex(v => v[0] === x1 && v[1] === y1)] = [x2, y2]
 	
 			activeBoard[y2-1][x2-1] = activeBoard[y1-1][x1-1]
 			activeBoard[y1-1][x1-1] = "#"
-			if (piece.toUpperCase() === "P") { 
+			if (piece.toUpperCase() === "P") { // Pawn Special Cases
 				if (y2 === (colour ? 1 : 8)) { // Promotion
-					this.mode = "promo"
-					this.promoSquare = [x2, y2]
-					this.bitboards[piece] = this.bitboards[piece].filter(v => v[0] !== x2 || v[1] !== y2)
-				} else if (move[2] === true) { // En Passant
+					if (!query) {
+						this.mode = "promo" // change piece promotion later or smth bozo <---------------- Important; temporary fix
+						this.promoSquare = [x2, y2]
+						locator[piece] = locator[piece].filter(v => v[0] !== x2 || v[1] !== y2)
+					}
+				} else if (Math.abs(x2-x1) === 1 && capturedPiece === "#") { // En Passant
 					notation += "x"
 					let capturedPawn = this.getColour(activeBoard[y1-1][x2-1]) ? "P" : "p"
-					this.bitboards[capturedPawn] = this.bitboards[capturedPawn].filter(v => v[0] !== x2 || v[1] !== y1)
+					locator[capturedPawn] = locator[capturedPawn].filter(v => v[0] !== x2 || v[1] !== y1)
 					activeBoard[y1-1][x2-1] = "#"
 				}
 			}
 	
 			notation += this.getNotation(x2, y2)
 	
-			if (piece.toUpperCase() === "K") {
+			if (piece.toUpperCase() === "K") { // King Special Cases
 				if (colour) {
-					this.whiteLeftRook = false
-					this.whiteRightRook = false
+					castleArr[0] = false
+					castleArr[1] = false
 				} else {
-					this.blackLeftRook = false
-					this.blackRightRook = false
+					castleArr[2] = false
+					castleArr[3] = false
 				}
-				if (Math.abs(x1-x2) === 2) { // Castling FIX CHESS960
+				if (Math.abs(x1-x2) === 2) { // Castling - FIX IN CHESS960
 					let rookNewX = x1-x2 > 0 ? 4 : 6
 					let rookOldX = x1-x2 > 0 ? 1 : 8 // Here these vals need to be changed to rookStartX
 					let rook = colour ? "R" : "r"
 					let rookY = colour ? 8 : 1
 
-					this.bitboards[rook][this.bitboards[rook].findIndex(v => v[0] === rookOldX && v[1] === rookY)] = [rookNewX, rookY]
+					locator[rook][locator[rook].findIndex(v => v[0] === rookOldX && v[1] === rookY)] = [rookNewX, rookY]
 					notation = x1-x2 > 0 ? "O-O-O" : "O-O"
 					activeBoard[y2-1][rookNewX-1] = rook
 					activeBoard[y2-1][rookOldX-1] = "#"
@@ -453,59 +481,57 @@ class Chess {
 			}
 	
 			if ((x1 === 1 && y1 === 1) || (x2 === 1 && y2 === 1)) { // Change this for chess960 too
-				this.blackLeftRook = false
+				castleArr[2] = false
 			} else if ((x1 === 1 && y1 === 8) || (x2 === 1 && y2 === 8)) {
-				this.whiteLeftRook = false
+				castleArr[0] = false
 			} else if ((x1 === 8 && y1 === 1) || (x2 === 8 && y2 === 1)) {
-				this.blackRightRook = false
+				castleArr[3] = false
 			} else if ((x1 === 8 && y1 === 8) || (x2 === 8 && y2 === 8)) {
-				this.whiteRightRook = false
+				castleArr[1] = false
 			}
-			if (this.isCheck(...this.bitboards[this.turn ? "k" : "K"][0], !this.turn)) {
-				notation += "+"
-			}
-			return [activeBoard, notation]
-		}
-		return false
+			if (this.isCheck(...locator[this.turn ? "k" : "K"][0], !this.turn, locator, this.board)) {
+				notation += "+"; if (!query) {sfx["check"].play()}
+			} return [activeBoard, castleArr, locator, notation]
+		} return false
 	}
 
-	isCheck(x1, y1, colour) {
-		let opposingKing = this.bitboards[colour ? "k" : "K"][0]
+	isCheck(x1, y1, colour, locator, activeBoard) {
+		let opposingKing = locator[colour ? "k" : "K"][0]
 		if (Math.max(Math.abs(x1-opposingKing[0]), Math.abs(y1-opposingKing[1])) === 1) {
 			return true // Check by King
 		}
 
-		for (let [x, y] of this.bitboards[colour ? "q" : "Q"]) {
+		for (let [x, y] of locator[colour ? "q" : "Q"]) {
 			if ([x1-x, y1-y].some(v => v === 0) || Math.abs(x1-x) === Math.abs(y1-y)) {
-				if (this.tween(x, y, x1, y1).every(v => this.board[v[1]-1][v[0]-1] === "#")) {
+				if (this.tween(x, y, x1, y1).every(v => activeBoard[v[1]-1][v[0]-1] === "#")) {
 					return true // Check by Queen
 				}
 			}
 		}
 
-		for (let [x, y] of this.bitboards[colour ? "r" : "R"]) {
+		for (let [x, y] of locator[colour ? "r" : "R"]) {
 			if ([x1-x, y1-y].some(v => v === 0)) {
-				if (this.tween(x, y, x1, y1).every(v => this.board[v[1]-1][v[0]-1] === "#")) {
+				if (this.tween(x, y, x1, y1).every(v => activeBoard[v[1]-1][v[0]-1] === "#")) {
 					return true // Check by Rook
 				}
 			}
 		}
 
-		for (let [x, y] of this.bitboards[colour ? "b" : "B"]) {
+		for (let [x, y] of locator[colour ? "b" : "B"]) {
 			if (Math.abs(x1-x) === Math.abs(y1-y)) {
-				if (this.tween(x, y, x1, y1).every(v => this.board[v[1]-1][v[0]-1] === "#")) {
+				if (this.tween(x, y, x1, y1).every(v => activeBoard[v[1]-1][v[0]-1] === "#")) {
 					return true // Check by Bishop
 				}
 			}
 		}
 
-		for (let [x, y] of this.bitboards[colour ? "n" : "N"]) {
+		for (let [x, y] of locator[colour ? "n" : "N"]) {
 			if ([Math.abs(x1-x), Math.abs(y1-y)].sort().join("") === [1, 2].join("")) {
 				return true // Check by Knight
 			}
 		}
 
-		for (let [x, y] of this.bitboards[colour ? "p" : "P"]) {
+		for (let [x, y] of locator[colour ? "p" : "P"]) {
 			if (Math.abs(x1-x) === 1 && y1 === y + (colour ? 1 : -1)) {
 				return true // Check by Pawn
 			}
@@ -531,7 +557,7 @@ function getRankandFileFromMouse(x, y) {
 	if (Math.min(x,y) > decile && Math.max(x,y) < 9 * decile) {
 		let rank = Math.floor(x/decile)
 		let file = Math.floor(y/decile)
-		if (!flip) {rank = 9 - rank; file = 9 - file}
+		if (!game.flip) {rank = 9 - rank; file = 9 - file}
 		return [rank, file]
 	}
 	return [false, false]
@@ -557,7 +583,7 @@ function mousePressed() {
 				game.board[game.promoSquare[1]-1][game.promoSquare[0]-1] = piece
 				game.boardHistory[game.boardHistory.length-1][game.promoSquare[1]-1][game.promoSquare[0]-1] = piece
 				game.moveHistory[game.moveHistory.length-1] += "=" + piece.toUpperCase()
-				if (game.isCheck(...game.bitboards[!game.turn ? "k" : "K"][0], game.turn)) {
+				if (game.isCheck(...game.bitboards[!game.turn ? "k" : "K"][0], game.turn, game.bitboards, game.board)) {
 					game.moveHistory[game.moveHistory.length-1] += "+"
 				} game.mode = "board"
 			}
@@ -568,15 +594,8 @@ function mousePressed() {
 		if (mouseBuffer[2] === CENTER && mouseButton === LEFT) {
 			if ((mouseBuffer[0] !== rank || mouseBuffer[1] !== file) && mouseButton === LEFT) {
 				let piece = game.board[mouseBuffer[1] - 1][mouseBuffer[0] - 1]
-				let move = game.handleMove(mouseBuffer[0], mouseBuffer[1], rank, file, piece, game.copyBoard(game.board))
-				if (move) {
-					game.board = move[0] // if success
-					game.boardHistory.push(move[0])
-					game.move = game.boardHistory.length - 1
-					game.turn = !game.turn
-					game.moveHistory.push(move[1])
-				}
-
+				let move = game.handleMove(mouseBuffer[0], mouseBuffer[1], rank, file, piece, game.copyBitboard(game.bitboards), game.copyBoard(game.board), [...game.canCastle])
+				if (move) {game.updateAttributes(move)}
 			} mouseBuffer = [false, false, false]
 			
 		} else if (mouseButton !== LEFT || game.board[file-1][rank-1] !== "#") {
@@ -602,16 +621,9 @@ function mouseReleased() {
 	} else if (mouseBuffer[2] === LEFT && (mouseBuffer[0] !== rank || mouseBuffer[1] !== file)) { // Handle Move
 		let piece = game.board[mouseBuffer[1] - 1][mouseBuffer[0] - 1]
 		if (game.getColour(piece) === game.turn && piece !== "#") {
-			let move = game.handleMove(mouseBuffer[0], mouseBuffer[1], rank, file, piece, game.copyBoard(game.board))
-			if (move) {
-				game.board = move[0] // if success
-				game.boardHistory.push(move[0])
-				game.move = game.boardHistory.length - 1
-				game.turn = !game.turn
-				game.moveHistory.push(move[1])
-			}
+			let move = game.handleMove(mouseBuffer[0], mouseBuffer[1], rank, file, piece, game.copyBitboard(game.bitboards), game.copyBoard(game.board), [...game.canCastle])
+			if (move) {game.updateAttributes(move)}
 		}
-
 	} else if (mouseBuffer[2] === LEFT && (mouseBuffer[0] === rank && mouseBuffer[1] === file)) { // Possible Move
 		let piece = game.board[file - 1][rank - 1]
 		if (game.getColour(piece) === game.turn && piece !== "#") {
@@ -623,7 +635,7 @@ function mouseReleased() {
 function keyPressed() {
 	switch (key) {
 		case "x":
-			flip = !flip
+			game.flip = !game.flip
 			break
 
 		case "r":
@@ -652,7 +664,7 @@ function keyPressed() {
 	}
 }
 
-class Bot {
+class Bot extends Chess {
 	constructor() {
 
 	}
