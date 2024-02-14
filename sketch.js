@@ -566,7 +566,7 @@ function getRankandFileFromMouse(x, y) {
 function mousePressed() {
 	[rank, file] = getRankandFileFromMouse(mouseX, mouseY)
 	if (mouseButton === LEFT) {
-		game.highlightSquares = []; game.arrowSquares = []; move = game.boardHistory.length - 1
+		game.highlightSquares = []; game.arrowSquares = []; game.move = game.boardHistory.length - 1
 		if (game.mode === "promo") { // Promotion
 			if (Math.min(rank, file) >= 4 && Math.max(rank, file) <= 5) {
 				let piece
