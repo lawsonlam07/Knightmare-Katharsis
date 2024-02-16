@@ -1,9 +1,11 @@
 let startFEN = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR"
 let newFEN = "rn1qkb1r/pp2pppp/2p2n2/5b2/P1pP3N/2N5/1P2PPPP/R1BQKB1R"
 let randomFEN = "bbrknnqr/pppppppp/8/8/8/8/PPPPPPPP/BBRKNNQR"
+
 let mouseBuffer = [false, false, false]
-let mode = "game"
-let decile, game
+let decile, game, time
+let mode = "menu"
+let start = new Date().getTime()
 
 let testText
 
@@ -42,10 +44,15 @@ function setup() {
 
 function draw() {
 	createCanvas(windowWidth, windowHeight)
-	background(25)
+	background(200)
+	time = new Date().getTime()
 	decile = Math.min(windowWidth, windowHeight) / 10
 
+	if (mode === "game") {game.draw()}
 	game.draw()
+
+	transition(start, 1500, "part", "bounce")
+	//rect(lerp(windowWidth/2, 1000, t), windowHeight/2, lerp(windowHeight * 0.5, windowHeight * 0.375, t), lerp(windowHeight*0.75, windowHeight/2, t))
 	text(testText, mouseX, mouseY)
 }
 
@@ -162,7 +169,7 @@ class Chess {
 
 	drawShadow() {
 		push()
-		fill(0)
+		fill(0, 200)
 		rectMode(CORNER)
 		square(decile*1.125, decile*1.125, decile*8)
 		pop()
@@ -538,6 +545,76 @@ class Chess {
 	}
 }
 
+function transition(start, duration, type, style="linear") {
+	push()
+	let col = 0
+	fill(col)
+	stroke(0, 0)
+	let t = factor(start, duration, style)
+	switch (type) {
+		////////// Transition In //////////
+		case "ribbon":
+			let slide = lerp(0, windowWidth + windowHeight, t)
+			triangle(0, 0, 0, slide, slide, 0)
+			triangle(0, windowHeight, 0, windowHeight - slide, slide, windowHeight)
+			break
+
+		case "shutter":
+			triangle(0, 0, lerp(0, windowWidth, t), 0, 0, lerp(0, windowHeight, t))
+			triangle(windowWidth, windowHeight, windowWidth, lerp(windowHeight, 0, t), lerp(windowWidth, 0, t), windowHeight)
+			push(); stroke(col)
+			if (t === 1) {line(0, windowHeight, windowWidth, 0)}
+			pop()
+			break
+
+		case "slide":
+			rect(0, 0, lerp(0, windowWidth, t), windowHeight)
+			break
+
+		////////// Transition Out //////////
+		case "pull":
+			triangle(lerp(0, windowWidth, t), lerp(0, windowHeight, t), 0, windowHeight, windowWidth, windowHeight)
+			triangle(windowWidth, windowHeight, windowWidth, 0, lerp(0, windowWidth, t), lerp(0, windowHeight, t))
+			push()
+			stroke(col)
+			line(lerp(0, windowWidth, t), lerp(0, windowHeight, t), windowWidth, windowHeight)
+			pop()
+			break
+
+		case "drop":
+			rect(0, 0, windowWidth, lerp(windowHeight, 0, t))
+			break
+
+		case "part":
+			rect(0, 0, lerp(windowWidth/2, 0, t), windowHeight)
+			rect(windowWidth, 0, lerp(-windowWidth/2, 0, t), windowHeight)
+			break
+	} pop()
+}
+
+function factor(start, duration, style="linear") {
+	let factor = Math.min(1, (time - start) / duration)
+	switch (style) {
+		case "sine":
+			return sin(HALF_PI * factor)
+
+		case "circular":
+			return 1 - Math.sqrt(1 - factor ** 2)
+
+		case "elastic":
+			return ((factor+0.1)**2 * cos(7*factor - 0.463)) / 1.171
+
+		case "bounce":
+			return ((factor+0.1)**2 * Math.abs(cos(7*factor - 0.463))) / 1.171
+		
+		case "linear":
+			return factor
+
+		default:
+			return factor ** style
+	}
+}
+
 function printHistory() {
 	let moves = document.createElement("textarea")
 	let moveList = []
@@ -641,6 +718,10 @@ function keyPressed() {
 			game = new Chess(startFEN)
 			break
 
+		case "m":
+			start = new Date().getTime()
+			break
+
 		case "q":
 			printHistory()
 			break
@@ -669,13 +750,13 @@ class Bot extends Chess {
 	}
 }
 
-class BogoBot extends Bot {
+class Fortuna extends Bot {
 	constructor() {
 
 	}
 }
 
-class JankBot extends Bot {
+class Parallax extends Bot {
 	constructor() {
 		
 	}
@@ -698,4 +779,3 @@ class AlephInfinity extends Bot {
 		
 	}
 }
-
