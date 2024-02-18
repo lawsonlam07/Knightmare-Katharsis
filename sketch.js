@@ -4,10 +4,21 @@ let randomFEN = "bbrknnqr/pppppppp/8/8/8/8/PPPPPPPP/BBRKNNQR"
 
 let mouseBuffer = [false, false, false]
 let decile, game, time
-let mode = "menu"
-let start = new Date().getTime()
+let mode = "mainMenu"
+let transitionStart = new Date().getTime()
 
-let testText
+let menuButtonStyle = `
+	transition: background-color 0.5s, width 0.5s, opacity 0.5s;
+	font-family: kodeMono, Courier New, Arial, serif;
+	border-bottom-right-radius: 3vh;
+	border-top-right-radius: 3vh;
+	text-align: right;
+	font-weight: bold;
+	padding-right: 2vw;
+	font-size: 15vh;
+	opacity: 0.9;
+	height: 20vh;
+`
 
 function preload() {
 	// Pieces by Cburnett - Own work, CC BY-SA 3.0
@@ -27,43 +38,100 @@ function preload() {
     }
 	sfx = {
 		"check": loadSound("SFX/check.mp3"),
-		"move": loadSound("SFX/move.mp3")
+		"move": loadSound("SFX/move.mp3"),
+		"hover": loadSound("SFX/menuHover.mp3"),
+		"click1": loadSound("SFX/menuClick1.mp3"),
+		"click2": loadSound("SFX/menuClick2.mp3"),
+		"click3": loadSound("SFX/menuClick3.mp3")
 	}
 	songs = {
 		"checkmate": loadSound("Songs/checkmate.mp3")
 	}
+	kodeMono = loadFont("Font/KodeMono.ttf")
 }
 
 function setup() {
 	// songs["checkmate"].loop()
 	createCanvas(windowWidth, windowHeight)
-	game = new Chess(startFEN)
+	textFont(kodeMono)
+	game = new Chess(newFEN)
+
+	mainMenuButtons = {
+		divs: {
+			playButton: createDiv("Play"),
+			puzzleButton: createDiv("Puzzles"),
+			creditsButton: createDiv("Credits")
+		},
+
+		uColour: {
+			"Play": "#C8C8C8",
+			"Puzzles": "#969696",
+			"Credits": "#646464"
+		},
+
+		vColour: {
+			"Play": "#3399FF",
+			"Puzzles": "#FFA500",
+			"Credits": "#884DFF"
+		},
+
+		position: {
+			"Play": 0.2,
+			"Puzzles": 0.45,
+			"Credits": 0.7
+		},
+
+		width: {
+			"Play": 70,
+			"Puzzles": 60,
+			"Credits": 50
+		},
+
+		sound: {
+			"Play": "click1",
+			"Puzzles": "click2",
+			"Credits": "click3"
+		},
+
+		mode: {
+			"Play": "playMenu",
+			"Puzzles": "puzzlesMenu",
+			"Credits": "creditsMenu"
+		}
+	}
+
+	for (let div in mainMenuButtons.divs) {
+		let text = mainMenuButtons.divs[div].html()
+		let properties = `background-color: ${mainMenuButtons.uColour[text]}; width: ${mainMenuButtons.width[text]}vw`
+		mainMenuButtons.divs[div].style(menuButtonStyle + properties)
+		mainMenuButtons.divs[div].class("p5Canvas")
+	}
+
 	for (let element of document.getElementsByClassName("p5Canvas")) {
 		element.addEventListener("contextmenu", v => v.preventDefault())
 	}
-	playButton = createDiv()
-	playButton.style("background-color: grey")
-	playButton.style("transition: background-color 0.5s, width 0.5s, opacity 0.5s")
-	playButton.size(windowWidth*3/4, windowHeight/5)
 }
-
 
 function draw() {
 	resizeCanvas(windowWidth, windowHeight)
+	clear()
 	time = new Date().getTime()
-	decile = Math.min(windowWidth, windowHeight) / 10
-	background(200)
+	transitionStart = time - 800 // Delete this lol
+	decile = min(windowWidth, windowHeight) / 10
+	background(50)
 
 	if (mode === "game") {game.draw()}
 	game.draw()
 
-	playButton.position(0, windowHeight/5)
-	playButton.mouseOver(mouseHover)
-	playButton.mouseOut(mouseNotHover)
-	playButton.mousePressed(mouseClickedElement)
+	for (let div in mainMenuButtons.divs) {
+		let text = mainMenuButtons.divs[div].html()
+		mainMenuButtons.divs[div].position(0, windowHeight * mainMenuButtons.position[text])
+		mainMenuButtons.divs[div].mouseOver(mouseHover)
+		mainMenuButtons.divs[div].mouseOut(mouseNotHover)
+		mainMenuButtons.divs[div].mousePressed(mouseClickedElement)
+	}
 
-	transition(start, 1500, "drop", "exponential")
-	text(testText, mouseX, mouseY)
+	transition(transitionStart, 1500, "pull", "sine")
 }
 
 class Chess {
@@ -121,7 +189,7 @@ class Chess {
 
 	getNotation(x, y) {return `${String.fromCharCode(96+x)}${9-y}`}
 
-	inBounds(x, y) {return Math.max(x, y) < 9 && Math.min(x, y) > 0}
+	inBounds(x, y) {return max(x, y) < 9 && min(x, y) > 0}
 
 	getColour(piece) {return piece === piece.toUpperCase()}
 
@@ -140,8 +208,8 @@ class Chess {
 	}
 
 	tween(x1, y1, x2, y2) {
-		let xIncre = x2-x1 ? Math.floor((x2-x1) / Math.abs(x2-x1)) : 0
-		let yIncre = y2-y1 ? Math.floor((y2-y1) / Math.abs(y2-y1)) : 0
+		let xIncre = x2-x1 ? floor((x2-x1) / abs(x2-x1)) : 0
+		let yIncre = y2-y1 ? floor((y2-y1) / abs(y2-y1)) : 0
 		let tweenSquares = []
 
 		while (x1 !== x2 - xIncre || y1 !== y2 - yIncre) {
@@ -229,8 +297,8 @@ class Chess {
 	drawArrow(x1, y1, x2, y2, ghost=false) {
 		if (!this.flip && !ghost) {[x1, y1, x2, y2] = [10-x1, 10-y1, 10-x2, 10-y2]}
 		else if (!this.flip && ghost) {[x1, y1] = [10-x1, 10-y1]}
-		let hypotenuse = Math.sqrt(Math.abs(x1-x2)**2 + Math.abs(y1-y2)**2)
-		let angle = Math.atan((y1-y2) / (x1-x2))
+		let hypotenuse = dist(x1, y1, x2, y2)
+		let angle = atan((y1-y2) / (x1-x2))
 		let xAvg = (x1+x2)/2
 		let yAvg = (y1+y2)/2
 	
@@ -465,7 +533,7 @@ class Chess {
 						this.promoSquare = [x2, y2]
 						locator[piece] = locator[piece].filter(v => v[0] !== x2 || v[1] !== y2)
 					}
-				} else if (Math.abs(x2-x1) === 1 && capturedPiece === "#") { // En Passant
+				} else if (abs(x2-x1) === 1 && capturedPiece === "#") { // En Passant
 					notation += "x"
 					let capturedPawn = this.getColour(activeBoard[y1-1][x2-1]) ? "P" : "p"
 					locator[capturedPawn] = locator[capturedPawn].filter(v => v[0] !== x2 || v[1] !== y1)
@@ -483,7 +551,7 @@ class Chess {
 					castleArr[2] = false
 					castleArr[3] = false
 				}
-				if (Math.abs(x1-x2) === 2) { // Castling - FIX IN CHESS960
+				if (abs(x1-x2) === 2) { // Castling - FIX IN CHESS960
 					let rookNewX = x1-x2 > 0 ? 4 : 6
 					let rookOldX = x1-x2 > 0 ? 1 : 8 // Here these vals need to be changed to rookStartX
 					let rook = colour ? "R" : "r"
@@ -513,12 +581,12 @@ class Chess {
 
 	isCheck(x1, y1, colour, locator, activeBoard) {
 		let opposingKing = locator[colour ? "k" : "K"][0]
-		if (Math.max(Math.abs(x1-opposingKing[0]), Math.abs(y1-opposingKing[1])) === 1) {
+		if (max(abs(x1-opposingKing[0]), abs(y1-opposingKing[1])) === 1) {
 			return true // Check by King
 		}
 
 		for (let [x, y] of locator[colour ? "q" : "Q"]) {
-			if ([x1-x, y1-y].some(v => v === 0) || Math.abs(x1-x) === Math.abs(y1-y)) {
+			if ([x1-x, y1-y].some(v => v === 0) || abs(x1-x) === abs(y1-y)) {
 				if (this.tween(x, y, x1, y1).every(v => activeBoard[v[1]-1][v[0]-1] === "#")) {
 					return true // Check by Queen
 				}
@@ -534,7 +602,7 @@ class Chess {
 		}
 
 		for (let [x, y] of locator[colour ? "b" : "B"]) {
-			if (Math.abs(x1-x) === Math.abs(y1-y)) {
+			if (abs(x1-x) === abs(y1-y)) {
 				if (this.tween(x, y, x1, y1).every(v => activeBoard[v[1]-1][v[0]-1] === "#")) {
 					return true // Check by Bishop
 				}
@@ -542,13 +610,13 @@ class Chess {
 		}
 
 		for (let [x, y] of locator[colour ? "n" : "N"]) {
-			if ([Math.abs(x1-x), Math.abs(y1-y)].sort().join("") === [1, 2].join("")) {
+			if ([abs(x1-x), abs(y1-y)].sort().join("") === [1, 2].join("")) {
 				return true // Check by Knight
 			}
 		}
 
 		for (let [x, y] of locator[colour ? "p" : "P"]) {
-			if (Math.abs(x1-x) === 1 && y1 === y + (colour ? 1 : -1)) {
+			if (abs(x1-x) === 1 && y1 === y + (colour ? 1 : -1)) {
 				return true // Check by Pawn
 			}
 		} return false
@@ -556,17 +624,26 @@ class Chess {
 }
 
 function mouseHover() {
-	this.style("background-color: lightgreen")
-	this.size(windowWidth*4/5, windowHeight/5)
+	if (mode === "mainMenu") {
+		sfx["hover"].play()
+		this.style(`width: ${mainMenuButtons.width[this.html()] + 10}vw; background-color: ${mainMenuButtons.vColour[this.html()]}`)
+	}
+	//this.style("background-color: lightgreen; width: 80vw")
 }
 
 function mouseNotHover() {
-	this.style("background-color: grey")
-	this.size(windowWidth*2/3, windowHeight/5)
+	if (mode === "mainMenu") {
+		this.style(`width: ${mainMenuButtons.width[this.html()]}vw; background-color: ${mainMenuButtons.uColour[this.html()]}`)
+	}
 }
 
 function mouseClickedElement() {
-	this.style("opacity: 0")
+	for (let div in mainMenuButtons.divs) {
+		mainMenuButtons.divs[div].style("opacity: 0; width: 0vw")
+		sfx[mainMenuButtons.sound[this.html()]].play()
+		mode = mainMenuButtons.mode[this.html()]
+	}
+	console.log(mode)
 }
 
 function transition(start, duration, type, style="linear") {
@@ -578,7 +655,7 @@ function transition(start, duration, type, style="linear") {
 	switch (type) {
 		////////// Transition In //////////
 		case "ribbon":
-			let slide = lerp(0, Math.max(windowWidth, windowHeight) + Math.min(windowWidth, windowHeight)/2, t)
+			let slide = lerp(0, max(windowWidth, windowHeight) + min(windowWidth, windowHeight)/2, t)
 			triangle(0, 0, 0, slide, slide, 0)
 			triangle(0, windowHeight, 0, windowHeight - slide, slide, windowHeight)
 			break
@@ -621,13 +698,13 @@ function transition(start, duration, type, style="linear") {
 }
 
 function factor(start, duration, style="linear") {
-	let x = Math.min(1, (time - start) / duration)
+	let x = min(1, (time - start) / duration)
 	switch (style) {
 		case "sine":
 			return sin(HALF_PI * x)
 
 		case "circular":
-			return Math.sqrt(2*x - x**2)
+			return sqrt(2*x - x**2)
 
 		case "exponential":
 			return 1000 ** (x-1)
@@ -636,7 +713,7 @@ function factor(start, duration, style="linear") {
 			return 1 - (x - 1)**2 * cos(7*x)
 
 		case "bounce":
-			return 1 - (x - 1)**2 * Math.abs(cos(7*x))
+			return 1 - (x - 1)**2 * abs(cos(7*x))
 		
 		case "linear":
 			return x
@@ -646,18 +723,14 @@ function factor(start, duration, style="linear") {
 	}
 }
 
-function mouseHoverCheck(x1, x2, y1, y2) {
-	return x1 <= mouseX && mouseX <= x2 && y1 <= mouseY && mouseY <= y2
-}
-
 function printHistory() {
 	let moves = document.createElement("textarea")
 	let moveList = []
 	for (let i = 0; i < game.moveHistory.length; i += 2) {
-		moveList.push(`${Math.floor(i/2)+1}. ${game.moveHistory.slice(i, i + 2).join(" ")}`)
+		moveList.push(`${floor(i/2)+1}. ${game.moveHistory.slice(i, i + 2).join(" ")}`)
 	}
 	document.body.appendChild(moves)
-	testText = moveList.join("     ")
+	console.log(moveList.join("     "))
 	moves.value = moveList.join("     ")
 	moves.select()
 	document.execCommand("copy")
@@ -665,9 +738,9 @@ function printHistory() {
 }
 
 function getRankandFileFromMouse(x, y) {
-	if (Math.min(x,y) > decile && Math.max(x,y) < 9 * decile) {
-		let rank = Math.floor(x/decile)
-		let file = Math.floor(y/decile)
+	if (min(x,y) > decile && max(x,y) < 9 * decile) {
+		let rank = floor(x/decile)
+		let file = floor(y/decile)
 		if (!game.flip) {rank = 9 - rank; file = 9 - file}
 		return [rank, file]
 	}
@@ -679,7 +752,7 @@ function mousePressed() {
 	if (mouseButton === LEFT) {
 		game.highlightSquares = []; game.arrowSquares = []; game.move = game.boardHistory.length - 1
 		if (game.mode === "promo") { // Promotion
-			if (Math.min(rank, file) >= 4 && Math.max(rank, file) <= 5) {
+			if (min(rank, file) >= 4 && max(rank, file) <= 5) {
 				let piece
 				if (rank === 4 && file === 4) {
 					piece = !game.turn ? "Q" : "q"
@@ -754,7 +827,7 @@ function keyPressed() {
 			break
 
 		case "m":
-			start = new Date().getTime()
+			transitionStart = new Date().getTime()
 			break
 
 		case "q":
@@ -762,11 +835,11 @@ function keyPressed() {
 			break
 
 		case "ArrowLeft":
-			game.move = Math.max(game.move-1, 0)
+			game.move = max(game.move-1, 0)
 			break
 
 		case "ArrowRight":
-			game.move = Math.min(game.move+1, game.boardHistory.length-1)
+			game.move = min(game.move+1, game.boardHistory.length-1)
 			break
 
 		case "ArrowUp":
@@ -814,4 +887,3 @@ class AlephInfinity extends Bot {
 		
 	}
 }
-
