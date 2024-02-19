@@ -10,6 +10,7 @@ let mode = "mainMenu"
 let menuButtonStyle = `
 	transition: background-color 0.5s, width 0.5s, opacity 0.5s;
 	font-family: kodeMono, Courier New, Arial, serif;
+	-webkit-text-stroke: black 0.5vh;
 	border-bottom-right-radius: 3vh;
 	border-top-right-radius: 3vh;
 	text-align: right;
@@ -18,6 +19,7 @@ let menuButtonStyle = `
 	font-size: 15vh;
 	opacity: 0.9;
 	height: 20vh;
+	color: #E0E0E0;
 `
 
 function preload() {
@@ -887,3 +889,4 @@ class AlephInfinity extends Bot {
 		
 	}
 }
+
