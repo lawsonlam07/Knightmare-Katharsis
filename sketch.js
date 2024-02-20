@@ -13,13 +13,14 @@ let menuButtonStyle = `
 	-webkit-text-stroke: black 0.5vh;
 	border-bottom-right-radius: 3vh;
 	border-top-right-radius: 3vh;
+	padding-right: 2vw;
 	text-align: right;
 	font-weight: bold;
-	padding-right: 2vw;
 	font-size: 15vh;
+	cursor: default;
+	color: #E0E0E0;
 	opacity: 0.9;
 	height: 20vh;
-	color: #E0E0E0;
 `
 
 function preload() {
@@ -56,7 +57,7 @@ function setup() {
 	// songs["checkmate"].loop()
 	createCanvas(windowWidth, windowHeight)
 	textFont(kodeMono)
-	game = new Chess(newFEN)
+	game = new Chess(startFEN)
 
 	mainMenuButtons = {
 		divs: {
@@ -96,7 +97,7 @@ function setup() {
 		},
 
 		mode: {
-			"Play": "playMenu",
+			"Play": "game",
 			"Puzzles": "puzzlesMenu",
 			"Credits": "creditsMenu"
 		}
@@ -122,7 +123,7 @@ function draw() {
 	decile = min(windowWidth, windowHeight) / 10
 	background(50)
 
-	if (mode === "game") {game.draw()}
+	//if (mode === "game") {game.draw()}
 	game.draw()
 
 	for (let div in mainMenuButtons.divs) {
@@ -265,7 +266,7 @@ class Chess {
 
 	drawClickedSquares() {
 		fill(173, 163, 83, 200)
-		if (mouseBuffer[2] === CENTER || (mouseIsPressed === true && mouseButton === LEFT) && mouseBuffer[0]) {
+		if (mouseBuffer[2] === true || (mouseIsPressed === true && mouseButton === LEFT) && mouseBuffer[0]) {
 			if (this.flip) {square(mouseBuffer[0] * decile, mouseBuffer[1] * decile, decile)}
 			else {square((9 - mouseBuffer[0]) * decile, (9 - mouseBuffer[1]) * decile, decile)}
 		}
@@ -280,7 +281,7 @@ class Chess {
 				let arrX = this.flip ? y-1 : 8-y
 				let arrY = this.flip ? x-1 : 8-x
 				if (board[arrX][arrY] !== "#") {
-					if ([LEFT, CENTER].includes(mouseBuffer[2]) && arrY+1 === mouseBuffer[0] && arrX+1 === mouseBuffer[1] && mouseIsPressed) {
+					if ([LEFT, true].includes(mouseBuffer[2]) && arrY+1 === mouseBuffer[0] && arrX+1 === mouseBuffer[1] && mouseIsPressed) {
 						ghostX = arrX
 						ghostY = arrY
 					} else {
@@ -355,9 +356,9 @@ class Chess {
 	}
 
 	showLegalMoves() {
-		if ((mouseBuffer[2] === CENTER || (mouseIsPressed === true && mouseButton === LEFT) && mouseBuffer[0]) && this.mode === "board") {
+		if ((mouseBuffer[2] === true || (mouseIsPressed === true && mouseButton === LEFT) && mouseBuffer[0]) && this.mode === "board") {
 			let target = this.board[mouseBuffer[1]-1][mouseBuffer[0]-1]
-			if ([CENTER, LEFT].includes(mouseBuffer[2]) && (this.getColour(target)) === this.turn) {
+			if ([LEFT, true].includes(mouseBuffer[2]) && (this.getColour(target)) === this.turn) {
 				push()
 				fill(66, 135, 245, 100)
 				for (let [x, y] of this.getLegalMoves(mouseBuffer[0], mouseBuffer[1])) {
@@ -640,12 +641,13 @@ function mouseNotHover() {
 }
 
 function mouseClickedElement() {
-	for (let div in mainMenuButtons.divs) {
-		mainMenuButtons.divs[div].style("opacity: 0; width: 0vw")
-		sfx[mainMenuButtons.sound[this.html()]].play()
-		mode = mainMenuButtons.mode[this.html()]
+	if (mode === "mainMenu") {
+		for (let div in mainMenuButtons.divs) {
+			mainMenuButtons.divs[div].style("opacity: 0; width: 0vw")
+			sfx[mainMenuButtons.sound[this.html()]].play()
+			mode = mainMenuButtons.mode[this.html()]
+		}
 	}
-	console.log(mode)
 }
 
 function transition(start, duration, type, style="linear") {
@@ -777,7 +779,7 @@ function mousePressed() {
 	}
 
 	if (rank && file && mode === "game") {
-		if (mouseBuffer[2] === CENTER && mouseButton === LEFT) {
+		if (mouseBuffer[2] === true && mouseButton === LEFT) {
 			if ((mouseBuffer[0] !== rank || mouseBuffer[1] !== file) && mouseButton === LEFT) {
 				let piece = game.board[mouseBuffer[1] - 1][mouseBuffer[0] - 1]
 				let move = game.handleMove(mouseBuffer[0], mouseBuffer[1], rank, file, piece, game.copyBitboard(game.bitboards), game.copyBoard(game.board), [...game.canCastle])
@@ -813,7 +815,7 @@ function mouseReleased() {
 	} else if (mouseBuffer[2] === LEFT && (mouseBuffer[0] === rank && mouseBuffer[1] === file)) { // Possible Move
 		let piece = game.board[file - 1][rank - 1]
 		if (game.getColour(piece) === game.turn && piece !== "#") {
-			mouseBuffer[2] = CENTER
+			mouseBuffer[2] = true
 		}
 	}
 }
