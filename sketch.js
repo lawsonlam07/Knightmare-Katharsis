@@ -119,7 +119,7 @@ function draw() {
 	resizeCanvas(windowWidth, windowHeight)
 	clear()
 	time = new Date().getTime()
-	transitionStart = time - 800 // Delete this lol
+	//transitionStart = time - 800 // Delete this lol
 	decile = min(windowWidth, windowHeight) / 10
 	background(50)
 
@@ -426,9 +426,6 @@ class Chess {
 		let pseudoLegalMoves = []
 		let legalMoves = []
 		switch(piece.toUpperCase()) {
-			// Check Check here
-			// this.isCheck(...this.bitboards[this.turn ? "K" : "k"][0])
-
 			case "P":
 				let double = colour ? 7 : 2
 				let dir = colour ? -1 : 1
@@ -631,7 +628,6 @@ function mouseHover() {
 		sfx["hover"].play()
 		this.style(`width: ${mainMenuButtons.width[this.html()] + 10}vw; background-color: ${mainMenuButtons.vColour[this.html()]}`)
 	}
-	//this.style("background-color: lightgreen; width: 80vw")
 }
 
 function mouseNotHover() {
