@@ -639,9 +639,15 @@ function mouseNotHover() {
 function mouseClickedElement() {
 	if (mode === "mainMenu") {
 		for (let div in mainMenuButtons.divs) {
+			let text = mainMenuButtons.divs[div].html()
 			mainMenuButtons.divs[div].style("opacity: 0; width: 0vw")
 			sfx[mainMenuButtons.sound[this.html()]].play()
-			mode = mainMenuButtons.mode[this.html()]
+			//mode = mainMenuButtons.mode[this.html()]
+
+			setTimeout(() => {
+				mainMenuButtons.divs[div].style(`opacity: 1; width: ${mainMenuButtons.width[text]}vw`)
+				// change button HTML
+			}, 750)
 		}
 	}
 }
