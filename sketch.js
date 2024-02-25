@@ -1,6 +1,7 @@
 let startFEN = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR"
 let newFEN = "rn1qkb1r/pp2pppp/2p2n2/5b2/P1pP3N/2N5/1P2PPPP/R1BQKB1R"
 let randomFEN = "bbrknnqr/pppppppp/8/8/8/8/PPPPPPPP/BBRKNNQR"
+
 let transitionStart = new Date().getTime()
 let mouseBuffer = [false, false, false]
 let decile, game, time
@@ -20,7 +21,8 @@ let menuButtonStyle = `
 	color: #E0E0E0;
 	opacity: 0.9;
 	height: 20vh;
-`
+` 
+let menuDebounce = true
 
 function preload() {
 	// Pieces by Cburnett - Own work, CC BY-SA 3.0
@@ -58,35 +60,67 @@ function setup() {
 	textFont(kodeMono)
 	game = new Chess(startFEN)
 
-	mainMenuButtons = {
+	buttons = {
 		divs: {
-			playButton: createDiv("Play"),
-			puzzleButton: createDiv("Puzzles"),
-			creditsButton: createDiv("Credits")
+			topButton: createDiv("Classic"),
+			middleButton: createDiv("Chess960"),
+			bottomButton: createDiv("Atomic")
 		},
 
 		uColour: {
 			"Play": "#C8C8C8",
 			"Puzzles": "#969696",
-			"Credits": "#646464"
+			"Credits": "#646464",
+
+			"Classic": "#73A9FF",
+			"Chess960": "#4287F5",
+			"Atomic": "#305DA6",
+
+			"Standard": 70,
+			"Rhythm": 60,
+			"Solo": 50
 		},
 
 		vColour: {
 			"Play": "#3399FF",
 			"Puzzles": "#FFA500",
-			"Credits": "#884DFF"
+			"Credits": "#884DFF", // finish this stuff
+			
+			"Classic": 0.2,
+			"Chess960": 0.45,
+			"Atomic": 0.7,
+
+			"Standard": 0.2,
+			"Rhythm": 0.45,
+			"Solo": 0.7
 		},
 
 		position: {
 			"Play": 0.2,
 			"Puzzles": 0.45,
-			"Credits": 0.7
+			"Credits": 0.7,
+
+			"Classic": 0.2,
+			"Chess960": 0.45,
+			"Atomic": 0.7,
+
+			"Standard": 0.2,
+			"Rhythm": 0.45,
+			"Solo": 0.7
 		},
 
 		width: {
 			"Play": 70,
 			"Puzzles": 60,
-			"Credits": 50
+			"Credits": 50,
+
+			"Classic": 70,
+			"Chess960": 60,
+			"Atomic": 50,
+
+			"Standard": 70,
+			"Rhythm": 60,
+			"Solo": 50
 		},
 
 		sound: {
@@ -102,11 +136,11 @@ function setup() {
 		}
 	}
 
-	for (let div in mainMenuButtons.divs) {
-		let text = mainMenuButtons.divs[div].html()
-		let properties = `background-color: ${mainMenuButtons.uColour[text]}; width: ${mainMenuButtons.width[text]}vw`
-		mainMenuButtons.divs[div].style(menuButtonStyle + properties)
-		mainMenuButtons.divs[div].class("p5Canvas")
+	for (let div in buttons.divs) {
+		let text = buttons.divs[div].html()
+		let properties = `background-color: ${buttons.uColour[text]}; width: ${buttons.width[text]}vw`
+		buttons.divs[div].style(menuButtonStyle + properties)
+		buttons.divs[div].class("p5Canvas")
 	}
 
 	for (let element of document.getElementsByClassName("p5Canvas")) {
@@ -125,12 +159,12 @@ function draw() {
 	//if (mode === "game") {game.draw()}
 	game.draw()
 
-	for (let div in mainMenuButtons.divs) {
-		let text = mainMenuButtons.divs[div].html()
-		mainMenuButtons.divs[div].position(0, windowHeight * mainMenuButtons.position[text])
-		mainMenuButtons.divs[div].mouseOver(mouseHover)
-		mainMenuButtons.divs[div].mouseOut(mouseNotHover)
-		mainMenuButtons.divs[div].mousePressed(mouseClickedElement)
+	for (let div in buttons.divs) {
+		let text = buttons.divs[div].html()
+		buttons.divs[div].position(0, windowHeight * buttons.position[text])
+		buttons.divs[div].mouseOver(mouseHover)
+		buttons.divs[div].mouseOut(mouseNotHover)
+		buttons.divs[div].mousePressed(mouseClickedElement)
 	}
 
 	transition(transitionStart, 1500, "pull", "sine")
@@ -623,29 +657,32 @@ class Chess {
 }
 
 function mouseHover() {
-	if (mode === "mainMenu") {
+	if (menuDebounce) {
 		sfx["hover"].play()
-		this.style(`width: ${mainMenuButtons.width[this.html()] + 10}vw; background-color: ${mainMenuButtons.vColour[this.html()]}`)
+		this.style(`width: ${buttons.width[this.html()] + 10}vw; background-color: ${buttons.vColour[this.html()]}`)
 	}
 }
 
 function mouseNotHover() {
-	if (mode === "mainMenu") {
-		this.style(`width: ${mainMenuButtons.width[this.html()]}vw; background-color: ${mainMenuButtons.uColour[this.html()]}`)
+	if (menuDebounce) {
+		this.style(`width: ${buttons.width[this.html()]}vw; background-color: ${buttons.uColour[this.html()]}`)
 	}
 }
 
 function mouseClickedElement() {
-	if (mode === "mainMenu") {
-		for (let div in mainMenuButtons.divs) {
-			let text = mainMenuButtons.divs[div].html()
-			mainMenuButtons.divs[div].style("opacity: 0; width: 0vw")
-			sfx[mainMenuButtons.sound[this.html()]].play()
-			//mode = mainMenuButtons.mode[this.html()]
+	if (menuDebounce) {
+		menuDebounce = false
+		for (let div in buttons.divs) {
+			let text = buttons.divs[div].html()
+			buttons.divs[div].style("opacity: 0; width: 0vw")
+			sfx[buttons.sound[this.html()]].play()
+			//mode = buttons.mode[this.html()]
 
 			setTimeout(() => {
-				mainMenuButtons.divs[div].style(`opacity: 1; width: ${mainMenuButtons.width[text]}vw`)
-				// change button HTML
+				menuDebounce = true
+				buttons.divs[div].html("Solo")
+				text = buttons.divs[div].html()
+				buttons.divs[div].style(`opacity: 1; width: ${buttons.width[text]}vw`)
 			}, 750)
 		}
 	}
