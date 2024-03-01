@@ -16,4 +16,4 @@ I am also working on a documentation website here:
 
 This project is made with [p5.js](https://p5js.org/), which is a JavaScript library that allows me to draw to the screen without using HTML and CSS.
 
-The only thing that isn't made by me are the pieces, which are by CBurnett.
+The only thing that isn't made by me are the pieces and sound effects, which are by CBurnett.
