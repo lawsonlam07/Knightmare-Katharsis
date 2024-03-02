@@ -6,6 +6,8 @@ Currently, you can move the pieces, highlight squares and draw arrows.
 
 Update 2: Moves have been validated.
 
+---
+
 I am working on a menu system and a simple bot for the next update.
 
 I release beta versions that you can play here:
