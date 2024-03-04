@@ -7,6 +7,7 @@ let mouseBuffer = [false, false, false]
 let decile, game, time
 let mode = "mainMenu"
 
+
 let menuButtonStyle = `
 	transition: background-color 0.5s, width 0.5s, opacity 0.5s;
 	font-family: kodeMono, Courier New, Arial, serif;
