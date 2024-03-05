@@ -1,11 +1,12 @@
 let startFEN = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR"
+
 let newFEN = "rn1qkb1r/pp2pppp/2p2n2/5b2/P1pP3N/2N5/1P2PPPP/R1BQKB1R"
 let randomFEN = "bbrknnqr/pppppppp/8/8/8/8/PPPPPPPP/BBRKNNQR"
 
 let transitionStart = new Date().getTime()
 let mouseBuffer = [false, false, false]
 let decile, game, time
-let mode = "mainMenu"
+let mode = "game"
 
 let menuButtonStyle = `
 	transition: background-color 0.5s, width 0.5s, opacity 0.5s;
@@ -62,9 +63,9 @@ function setup() {
 
 	buttons = {
 		divs: {
-			topButton: createDiv("Classic"),
-			middleButton: createDiv("Chess960"),
-			bottomButton: createDiv("Atomic")
+			// topButton: createDiv("Classic"),
+			// middleButton: createDiv("Chess960"),
+			// bottomButton: createDiv("Atomic")
 		},
 
 		uColour: {
@@ -136,12 +137,12 @@ function setup() {
 		}
 	}
 
-	for (let div in buttons.divs) {
-		let text = buttons.divs[div].html()
-		let properties = `background-color: ${buttons.uColour[text]}; width: ${buttons.width[text]}vw`
-		buttons.divs[div].style(menuButtonStyle + properties)
-		buttons.divs[div].class("p5Canvas")
-	}
+	// for (let div in buttons.divs) {
+	// 	let text = buttons.divs[div].html()
+	// 	let properties = `background-color: ${buttons.uColour[text]}; width: ${buttons.width[text]}vw`
+	// 	buttons.divs[div].style(menuButtonStyle + properties)
+	// 	buttons.divs[div].class("p5Canvas")
+	// }
 
 	for (let element of document.getElementsByClassName("p5Canvas")) {
 		element.addEventListener("contextmenu", v => v.preventDefault())
@@ -156,21 +157,20 @@ function draw() {
 	decile = min(windowWidth, windowHeight) / 10
 	background(50)
 
-	//if (mode === "game") {game.draw()}
-	game.draw()
+	if (mode === "game") {game.draw()}
 
-	for (let div in buttons.divs) {
-		let text = buttons.divs[div].html()
-		buttons.divs[div].position(0, windowHeight * buttons.position[text])
-		buttons.divs[div].mouseOver(mouseHover)
-		buttons.divs[div].mouseOut(mouseNotHover)
-		buttons.divs[div].mousePressed(mouseClickedElement)
-	}
+	// for (let div in buttons.divs) {
+	// 	let text = buttons.divs[div].html()
+	// 	buttons.divs[div].position(0, windowHeight * buttons.position[text])
+	// 	buttons.divs[div].mouseOver(mouseHover)
+	// 	buttons.divs[div].mouseOut(mouseNotHover)
+	// 	buttons.divs[div].mousePressed(mouseClickedElement)
+	// }
 
 	transition(transitionStart, 1500, "pull", "sine")
 }
 
-class Chess {
+class Chess { // Main Section of Code
 	constructor(fen) {
 		this.boardHistory = [this.initiateBoard(fen)]
 		this.bitboards = this.getBitboards(fen)
@@ -207,20 +207,14 @@ class Chess {
 	}
 
 	getBitboards(fen) {
-		let bitboards = {}
+		let bitboards = Object.fromEntries(Array.from("rnbqkpRNBQKP").map(v => [v, []]))
 		let x = 1; let y = 1
 		for (let char of fen) {
-			if (char === "/") {
-				x = 1; y++
+			if (char === "/") {x = 1; y++
 			} else if (isNaN(Number(char))) {
-				if (bitboards.hasOwnProperty(char)) {
-					bitboards[char].push([x, y])
-				} else {
-					bitboards[char] = [[x, y]]
-				} x++
+				bitboards[char].push([x, y]); x++
 			} else {x += Number(char)}
-		}
-		return bitboards
+		} return bitboards
 	}
 
 	getNotation(x, y) {return `${String.fromCharCode(96+x)}${9-y}`}
@@ -517,17 +511,17 @@ class Chess {
 					}
 				}
 				if (colour) { // Checks that every square between the king and rook is empty; AMEND FOR CHESS960 // || v[0] === this.rookStartX[0] || v[0] === this.bitboards["K"][0][0])) {
-					if (this.canCastle[0] && this.tween(5, 8, 1, 8).every(v => this.board[v[1]-1][v[0]-1] === "#" && !this.isCheck(v[0], v[1], colour, this.bitboards, this.board))) {
+					if (this.canCastle[0] && this.tween(6, 8, 1, 8).every(v => this.board[v[1]-1][v[0]-1] === "#" && !this.isCheck(v[0], v[1], colour, this.bitboards, this.board))) {
 						pseudoLegalMoves.push([x1-2, y1]) // Check if the player is castling through check, NOTE THAT THE CASTLING THROUGH CHECK BIT IS HARDCODED
 					}
-					if (this.canCastle[1] && this.tween(5, 8, 8, 8).every(v => this.board[v[1]-1][v[0]-1] === "#" && !this.isCheck(v[0], v[1], colour, this.bitboards, this.board))) {
+					if (this.canCastle[1] && this.tween(4, 8, 8, 8).every(v => this.board[v[1]-1][v[0]-1] === "#" && !this.isCheck(v[0], v[1], colour, this.bitboards, this.board))) {
 						pseudoLegalMoves.push([x1+2, y1])
 					}
 				} else {
-					if (this.canCastle[2] && this.tween(5, 1, 1, 1).every(v => this.board[v[1]-1][v[0]-1] === "#" && !this.isCheck(v[0], v[1], colour, this.bitboards, this.board))) {
+					if (this.canCastle[2] && this.tween(6, 1, 1, 1).every(v => this.board[v[1]-1][v[0]-1] === "#" && !this.isCheck(v[0], v[1], colour, this.bitboards, this.board))) {
 						pseudoLegalMoves.push([x1-2, y1])
 					}
-					if (this.canCastle[3] && this.tween(5, 1, 8, 1).every(v => this.board[v[1]-1][v[0]-1] === "#" && !this.isCheck(v[0], v[1], colour, this.bitboards, this.board))) {
+					if (this.canCastle[3] && this.tween(4, 1, 8, 1).every(v => this.board[v[1]-1][v[0]-1] === "#" && !this.isCheck(v[0], v[1], colour, this.bitboards, this.board))) {
 						pseudoLegalMoves.push([x1+2, y1])
 					}
 				}
@@ -929,3 +923,4 @@ class AlephInfinity extends Bot {
 		
 	}
 }
+
