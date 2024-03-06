@@ -61,11 +61,32 @@ function setup() {
 	textFont(kodeMono)
 	game = new Chess(startFEN)
 
+	backButton = createDiv("Back") // Shorten this shit
+	backButton.style(`
+		transition: background-color 0.5s, width 0.5s, opacity 0.5s, left 0.5s;
+		font-family: kodeMono, Courier New, Arial, serif;
+		-webkit-text-stroke: black 0.25vh;
+		border-bottom-left-radius: 1vh;
+		border-top-left-radius: 1vh;
+		background-color: #4A4A4A;
+		position: absolute;
+		font-weight: bold;
+		padding-left: 1vw;
+		text-align: left;
+		cursor: default;
+		font-size: 8vh;
+		color: #E0E0E0;
+		opacity: 0.9;
+		height: 10vh;
+		width: 14vw;
+		left: 85vw;
+		top: 5vh;
+	`)
 	buttons = {
 		divs: {
-			// topButton: createDiv("Classic"),
-			// middleButton: createDiv("Chess960"),
-			// bottomButton: createDiv("Atomic")
+			"top": createDiv("Play"),
+			"middle": createDiv("Puzzles"),
+			"bottom": createDiv("Credits"),
 		},
 
 		uColour: {
@@ -73,53 +94,53 @@ function setup() {
 			"Puzzles": "#969696",
 			"Credits": "#646464",
 
-			"Classic": "#73A9FF",
-			"Chess960": "#4287F5",
-			"Atomic": "#305DA6",
+			"Standard": "#64B5F6",
+			"Chess960": "#1E88E5",
+			"Atomic": "#1565C0",
 
-			"Standard": 70,
-			"Rhythm": 60,
-			"Solo": 50
+			"Classic": "#FBC02D",
+			"Rhythm": "#F9A825",
+			"Solo": "#F57F17"
 		},
 
 		vColour: {
 			"Play": "#3399FF",
 			"Puzzles": "#FFA500",
-			"Credits": "#884DFF", // finish this stuff
+			"Credits": "#884DFF",
 			
-			"Classic": 0.2,
-			"Chess960": 0.45,
-			"Atomic": 0.7,
+			"Standard": "#0097A7",
+			"Chess960": "#00838F",
+			"Atomic": "#006064",
 
-			"Standard": 0.2,
-			"Rhythm": 0.45,
-			"Solo": 0.7
+			"Classic": "#FF5722",
+			"Rhythm": "#E64A19",
+			"Solo": "#BF360C"
 		},
 
-		position: {
+		position: { // is this necessary?
 			"Play": 0.2,
 			"Puzzles": 0.45,
 			"Credits": 0.7,
 
-			"Classic": 0.2,
+			"Standard": 0.2,
 			"Chess960": 0.45,
 			"Atomic": 0.7,
 
-			"Standard": 0.2,
+			"Classic": 0.2,
 			"Rhythm": 0.45,
 			"Solo": 0.7
 		},
 
-		width: {
+		width: { // is this????
 			"Play": 70,
 			"Puzzles": 60,
 			"Credits": 50,
 
-			"Classic": 70,
+			"Standard": 70,
 			"Chess960": 60,
 			"Atomic": 50,
 
-			"Standard": 70,
+			"Classic": 70,
 			"Rhythm": 60,
 			"Solo": 50
 		},
@@ -134,15 +155,27 @@ function setup() {
 			"Play": "game",
 			"Puzzles": "puzzlesMenu",
 			"Credits": "creditsMenu"
+		},
+
+		"Play": { // Menu after button clicked
+			"top": "Standard",
+			"middle": "Chess960",
+			"bottom": "Atomic"
+		},
+
+		"Puzzles": {
+			"top": "Classic",
+			"middle": "Rhythm",
+			"bottom": "Solo"
 		}
 	}
 
-	// for (let div in buttons.divs) {
-	// 	let text = buttons.divs[div].html()
-	// 	let properties = `background-color: ${buttons.uColour[text]}; width: ${buttons.width[text]}vw`
-	// 	buttons.divs[div].style(menuButtonStyle + properties)
-	// 	buttons.divs[div].class("p5Canvas")
-	// }
+	for (let div in buttons.divs) {
+		let text = buttons.divs[div].html()
+		let properties = `background-color: ${buttons.uColour[text]}; width: ${buttons.width[text]}vw`
+		buttons.divs[div].style(menuButtonStyle + properties)
+		buttons.divs[div].class("p5Canvas")
+	}
 
 	for (let element of document.getElementsByClassName("p5Canvas")) {
 		element.addEventListener("contextmenu", v => v.preventDefault())
@@ -159,13 +192,16 @@ function draw() {
 
 	if (mode === "game") {game.draw()}
 
-	// for (let div in buttons.divs) {
-	// 	let text = buttons.divs[div].html()
-	// 	buttons.divs[div].position(0, windowHeight * buttons.position[text])
-	// 	buttons.divs[div].mouseOver(mouseHover)
-	// 	buttons.divs[div].mouseOut(mouseNotHover)
-	// 	buttons.divs[div].mousePressed(mouseClickedElement)
-	// }
+	for (let div in buttons.divs) {
+		let text = buttons.divs[div].html()
+		buttons.divs[div].position(0, windowHeight * buttons.position[text])
+		buttons.divs[div].mouseOver(mouseHover)
+		buttons.divs[div].mouseOut(mouseNotHover)
+		buttons.divs[div].mousePressed(mouseClickedElement)
+	}
+	backButton.mouseOver(mouseHover)
+	backButton.mouseOut(mouseNotHover)
+	backButton.mousePressed(mouseClickedElement)
 
 	transition(transitionStart, 1500, "pull", "sine")
 }
@@ -653,18 +689,27 @@ class Chess { // Main Section of Code
 function mouseHover() {
 	if (menuDebounce) {
 		sfx["hover"].play()
-		this.style(`width: ${buttons.width[this.html()] + 10}vw; background-color: ${buttons.vColour[this.html()]}`)
+		if (this.html() === "Back") {
+			this.style("width: 17vw; left: 82vw; background-color: #F44336")
+		} else {
+			this.style(`width: ${buttons.width[this.html()] + 10}vw; background-color: ${buttons.vColour[this.html()]}`)
+		}
 	}
 }
 
 function mouseNotHover() {
 	if (menuDebounce) {
-		this.style(`width: ${buttons.width[this.html()]}vw; background-color: ${buttons.uColour[this.html()]}`)
+		if (this.html() === "Back") {
+			this.style("width: 14vw; left: 85vw; background-color: #4A4A4A")
+		} else {
+			this.style(`width: ${buttons.width[this.html()]}vw; background-color: ${buttons.uColour[this.html()]}`)
+		}
 	}
 }
 
 function mouseClickedElement() {
-	if (menuDebounce) {
+	let clickedButton = this.html()
+	if (menuDebounce) { // if back button pressed?
 		menuDebounce = false
 		for (let div in buttons.divs) {
 			let text = buttons.divs[div].html()
@@ -674,9 +719,12 @@ function mouseClickedElement() {
 
 			setTimeout(() => {
 				menuDebounce = true
-				buttons.divs[div].html("Solo")
-				text = buttons.divs[div].html()
-				buttons.divs[div].style(`opacity: 1; width: ${buttons.width[text]}vw`)
+
+				for (let v of ["top", "middle", "bottom"]) {
+					let newText = buttons[clickedButton][v]
+					buttons.divs[v].html(newText)
+					buttons.divs[v].style(`opacity: 1; background-color: ${buttons.uColour[newText]}; width: ${buttons.width[newText]}vw`)
+				}
 			}, 750)
 		}
 	}
