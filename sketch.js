@@ -1,12 +1,11 @@
 let startFEN = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR"
-
 let newFEN = "rn1qkb1r/pp2pppp/2p2n2/5b2/P1pP3N/2N5/1P2PPPP/R1BQKB1R"
 let randomFEN = "bbrknnqr/pppppppp/8/8/8/8/PPPPPPPP/BBRKNNQR"
 
 let transitionStart = new Date().getTime()
 let mouseBuffer = [false, false, false]
 let decile, game, time
-let mode = "game"
+let mode = "menu"
 
 let menuButtonStyle = `
 	transition: background-color 0.5s, width 0.5s, opacity 0.5s;
@@ -47,7 +46,8 @@ function preload() {
 		"hover": loadSound("SFX/menuHover.mp3"),
 		"click1": loadSound("SFX/menuClick1.mp3"),
 		"click2": loadSound("SFX/menuClick2.mp3"),
-		"click3": loadSound("SFX/menuClick3.mp3")
+		"click3": loadSound("SFX/menuClick3.mp3"),
+		"error": loadSound("SFX/error.mp3")
 	}
 	songs = {
 		"checkmate": loadSound("Songs/checkmate.mp3")
@@ -79,7 +79,9 @@ function setup() {
 		opacity: 0.9;
 		height: 10vh;
 		width: 14vw;
-		left: 85vw;
+		left: 100vw;
+		opacity: 1;
+		width: 0vw;
 		top: 5vh;
 	`)
 	buttons = {
@@ -117,21 +119,7 @@ function setup() {
 			"Solo": "#BF360C"
 		},
 
-		position: { // is this necessary?
-			"Play": 0.2,
-			"Puzzles": 0.45,
-			"Credits": 0.7,
-
-			"Standard": 0.2,
-			"Chess960": 0.45,
-			"Atomic": 0.7,
-
-			"Classic": 0.2,
-			"Rhythm": 0.45,
-			"Solo": 0.7
-		},
-
-		width: { // is this????
+		width: {
 			"Play": 70,
 			"Puzzles": 60,
 			"Credits": 50,
@@ -151,7 +139,7 @@ function setup() {
 			"Credits": "click3"
 		},
 
-		mode: {
+		mode: { // is this necessary?
 			"Play": "game",
 			"Puzzles": "puzzlesMenu",
 			"Credits": "creditsMenu"
@@ -190,11 +178,14 @@ function draw() {
 	decile = min(windowWidth, windowHeight) / 10
 	background(50)
 
-	if (mode === "game") {game.draw()}
+	buttons.divs["top"].position(0, windowHeight * 0.2)
+	buttons.divs["middle"].position(0, windowHeight * 0.45)
+	buttons.divs["bottom"].position(0, windowHeight * 0.7)
+	game.draw()
+
 
 	for (let div in buttons.divs) {
 		let text = buttons.divs[div].html()
-		buttons.divs[div].position(0, windowHeight * buttons.position[text])
 		buttons.divs[div].mouseOver(mouseHover)
 		buttons.divs[div].mouseOut(mouseNotHover)
 		buttons.divs[div].mousePressed(mouseClickedElement)
@@ -688,10 +679,13 @@ class Chess { // Main Section of Code
 
 function mouseHover() {
 	if (menuDebounce) {
-		sfx["hover"].play()
 		if (this.html() === "Back") {
-			this.style("width: 17vw; left: 82vw; background-color: #F44336")
+			if (buttons.divs["top"].html() !== "Play") {
+				sfx["hover"].play()
+				this.style("width: 17vw; left: 82vw; background-color: #F44336")
+			}
 		} else {
+			sfx["hover"].play()
 			this.style(`width: ${buttons.width[this.html()] + 10}vw; background-color: ${buttons.vColour[this.html()]}`)
 		}
 	}
@@ -711,21 +705,66 @@ function mouseClickedElement() {
 	let clickedButton = this.html()
 	if (menuDebounce) { // if back button pressed?
 		menuDebounce = false
-		for (let div in buttons.divs) {
-			let text = buttons.divs[div].html()
-			buttons.divs[div].style("opacity: 0; width: 0vw")
-			sfx[buttons.sound[this.html()]].play()
-			//mode = buttons.mode[this.html()]
 
-			setTimeout(() => {
-				menuDebounce = true
-
-				for (let v of ["top", "middle", "bottom"]) {
-					let newText = buttons[clickedButton][v]
-					buttons.divs[v].html(newText)
-					buttons.divs[v].style(`opacity: 1; background-color: ${buttons.uColour[newText]}; width: ${buttons.width[newText]}vw`)
+		console.log(clickedButton)
+		if (clickedButton === "Back") {
+			if (buttons.divs["top"].html() !== "Play") {
+				let prevButtons
+				for (let div in buttons.divs) {
+					buttons.divs[div].style("opacity: 0; width: 0vw")
 				}
-			}, 750)
+
+				switch (buttons.divs["top"].html()) {
+					case "Standard":
+					case "Classic": // Remove back button
+						backButton.style("opacity: 0; background-color: #4A4A4A; width: 0vw; left: 100vw")
+						prevButtons = {
+							"top": "Play",
+							"middle": "Puzzles",
+							"bottom": "Credits"
+						}; break
+				}
+
+
+				setTimeout(() => {
+					menuDebounce = true
+					for (let v of ["top", "middle", "bottom"]) {
+						let newText = prevButtons[v]
+						buttons.divs[v].html(newText)
+						buttons.divs[v].style(`opacity: 0.9; background-color: ${buttons.uColour[newText]}; width: ${buttons.width[newText]}vw`)
+					}
+				}, 750)
+			} else {menuDebounce = true}
+
+
+
+
+		} else if (["Play", "Puzzles"].includes(clickedButton)) { // every other button
+			for (let div in buttons.divs) {
+				buttons.divs[div].style("opacity: 0; width: 0vw")
+				sfx[buttons.sound[this.html()]].play()
+
+				setTimeout(() => {
+					menuDebounce = true // Bring back back button
+					backButton.style("width: 14vw; left: 85vw; opacity: 0.9; background-color: #4A4A4A")
+					for (let v of ["top", "middle", "bottom"]) {
+						let newText = buttons[clickedButton][v]
+						buttons.divs[v].html(newText)
+						buttons.divs[v].style(`opacity: 0.9; background-color: ${buttons.uColour[newText]}; width: ${buttons.width[newText]}vw`)
+					}			
+				}, 750)
+			}
+		} else if (clickedButton === "Standard") {
+			mode = "game"
+			backButton.style("opacity: 0; background-color: #4A4A4A; width: 0vw; left: 100vw")
+			for (let v of ["top", "middle", "bottom"]) {
+				let newText = buttons.divs[v].html()
+				buttons.divs[v].html(newText)
+				buttons.divs[v].style(`opacity: 0; background-color: ${buttons.uColour[newText]}; width: 0vw`)
+			}	
+		} else { // In progress gamemodes
+			menuDebounce = true
+			sfx["error"].play()
 		}
 	}
 }
