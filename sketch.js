@@ -8,14 +8,17 @@ let decile, game, time
 let mode = "menu"
 
 let menuButtonStyle = `
-	transition: background-color 0.5s, width 0.5s, opacity 0.5s;
+	transition: background-color 0.5s, width 0.5s, opacity 0.5s, left 0.5s;
 	font-family: kodeMono, Courier New, Arial, serif;
 	-webkit-text-stroke: black 0.5vh;
 	border-bottom-right-radius: 3vh;
 	border-top-right-radius: 3vh;
+	-webkit-touch-callout: none;
+	position: absolute;
 	padding-right: 2vw;
 	text-align: right;
 	font-weight: bold;
+	user-select: none;
 	font-size: 15vh;
 	cursor: default;
 	color: #E0E0E0;
@@ -61,26 +64,17 @@ function setup() {
 	textFont(kodeMono)
 	game = new Chess(startFEN)
 
-	backButton = createDiv("Back") // Shorten this shit
-	backButton.style(`
-		transition: background-color 0.5s, width 0.5s, opacity 0.5s, left 0.5s;
-		font-family: kodeMono, Courier New, Arial, serif;
+	backButton = createDiv("Back")
+	backButton.style(menuButtonStyle + `
 		-webkit-text-stroke: black 0.25vh;
 		border-bottom-left-radius: 1vh;
 		border-top-left-radius: 1vh;
 		background-color: #4A4A4A;
-		position: absolute;
-		font-weight: bold;
 		padding-left: 1vw;
 		text-align: left;
-		cursor: default;
 		font-size: 8vh;
-		color: #E0E0E0;
-		opacity: 0.9;
 		height: 10vh;
-		width: 14vw;
 		left: 100vw;
-		opacity: 1;
 		width: 0vw;
 		top: 5vh;
 	`)
