@@ -1,9 +1,11 @@
 let startFEN = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR"
-let newFEN = "rn1qkb1r/pp2pppp/2p2n2/5b2/P1pP3N/2N5/1P2PPPP/R1BQKB1R"
 let randomFEN = "bbrknnqr/pppppppp/8/8/8/8/PPPPPPPP/BBRKNNQR"
+let newFEN = "rn1qkb1r/pp2pppp/2p2n2/5b2/P1pP3N/2N5/1P2PPPP/R1BQKB1R"
 
-let transitionStart = new Date().getTime()
+let clickedTime = 0
+let currentTransition = [null, null]
 let mouseBuffer = [false, false, false]
+let menuDebounce = true, backDebounce = true
 let decile, game, time
 let mode = "menu"
 
@@ -25,7 +27,6 @@ let menuButtonStyle = `
 	opacity: 0.9;
 	height: 20vh;
 ` 
-let menuDebounce = true
 
 function preload() {
 	// Pieces by Cburnett - Own work, CC BY-SA 3.0
@@ -50,7 +51,8 @@ function preload() {
 		"click1": loadSound("SFX/menuClick1.mp3"),
 		"click2": loadSound("SFX/menuClick2.mp3"),
 		"click3": loadSound("SFX/menuClick3.mp3"),
-		"error": loadSound("SFX/error.mp3")
+		"error": loadSound("SFX/error.mp3"),
+		"back": loadSound("SFX/back.mp3")
 	}
 	songs = {
 		"checkmate": loadSound("Songs/checkmate.mp3")
@@ -59,7 +61,7 @@ function preload() {
 }
 
 function setup() {
-	// songs["checkmate"].loop()
+	//songs["checkmate"].loop()
 	createCanvas(windowWidth, windowHeight)
 	textFont(kodeMono)
 	game = new Chess(startFEN)
@@ -92,7 +94,7 @@ function setup() {
 
 			"Standard": "#64B5F6",
 			"Chess960": "#1E88E5",
-			"Atomic": "#1565C0",
+			"Custom": "#1565C0",
 
 			"Classic": "#FBC02D",
 			"Rhythm": "#F9A825",
@@ -106,7 +108,7 @@ function setup() {
 			
 			"Standard": "#0097A7",
 			"Chess960": "#00838F",
-			"Atomic": "#006064",
+			"Custom": "#006064",
 
 			"Classic": "#FF5722",
 			"Rhythm": "#E64A19",
@@ -120,7 +122,7 @@ function setup() {
 
 			"Standard": 70,
 			"Chess960": 60,
-			"Atomic": 50,
+			"Custom": 50,
 
 			"Classic": 70,
 			"Rhythm": 60,
@@ -142,7 +144,7 @@ function setup() {
 		"Play": { // Menu after button clicked
 			"top": "Standard",
 			"middle": "Chess960",
-			"bottom": "Atomic"
+			"bottom": "Custom"
 		},
 
 		"Puzzles": {
@@ -168,7 +170,6 @@ function draw() {
 	resizeCanvas(windowWidth, windowHeight)
 	clear()
 	time = new Date().getTime()
-	//transitionStart = time - 800 // Delete this lol
 	decile = min(windowWidth, windowHeight) / 10
 	background(50)
 
@@ -179,7 +180,6 @@ function draw() {
 
 
 	for (let div in buttons.divs) {
-		let text = buttons.divs[div].html()
 		buttons.divs[div].mouseOver(mouseHover)
 		buttons.divs[div].mouseOut(mouseNotHover)
 		buttons.divs[div].mousePressed(mouseClickedElement)
@@ -188,7 +188,7 @@ function draw() {
 	backButton.mouseOut(mouseNotHover)
 	backButton.mousePressed(mouseClickedElement)
 
-	transition(transitionStart, 1500, "pull", "sine")
+	transition(clickedTime, 1500, ...currentTransition)
 }
 
 class Chess { // Main Section of Code
@@ -673,12 +673,12 @@ class Chess { // Main Section of Code
 
 function mouseHover() {
 	if (menuDebounce) {
-		if (this.html() === "Back") {
+		if (this.html() === "Back" && backDebounce) {
 			if (buttons.divs["top"].html() !== "Play") {
 				sfx["hover"].play()
 				this.style("width: 17vw; left: 82vw; background-color: #F44336")
 			}
-		} else {
+		} else if (mode === "menu") {
 			sfx["hover"].play()
 			this.style(`width: ${buttons.width[this.html()] + 10}vw; background-color: ${buttons.vColour[this.html()]}`)
 		}
@@ -687,9 +687,9 @@ function mouseHover() {
 
 function mouseNotHover() {
 	if (menuDebounce) {
-		if (this.html() === "Back") {
+		if (this.html() === "Back" && backDebounce) {
 			this.style("width: 14vw; left: 85vw; background-color: #4A4A4A")
-		} else {
+		} else if (mode === "menu") {
 			this.style(`width: ${buttons.width[this.html()]}vw; background-color: ${buttons.uColour[this.html()]}`)
 		}
 	}
@@ -697,46 +697,66 @@ function mouseNotHover() {
 
 function mouseClickedElement() {
 	let clickedButton = this.html()
-	if (menuDebounce) { // if back button pressed?
-		menuDebounce = false
 
-		console.log(clickedButton)
-		if (clickedButton === "Back") {
-			if (buttons.divs["top"].html() !== "Play") {
-				let prevButtons
-				for (let div in buttons.divs) {
-					buttons.divs[div].style("opacity: 0; width: 0vw")
-				}
+	switch (clickedButton) {
+		case "Play":
+		case "Puzzles":
+		case "Credits":
+			sfx["click1"].play()
+			break
 
-				switch (buttons.divs["top"].html()) {
-					case "Standard":
-					case "Classic": // Remove back button
-						backButton.style("opacity: 0; background-color: #4A4A4A; width: 0vw; left: 100vw")
-						prevButtons = {
-							"top": "Play",
-							"middle": "Puzzles",
-							"bottom": "Credits"
-						}; break
-				}
+		case "Standard":
+		case "Chess960":
+		case "Custom":
+		case "Classic":
+		case "Rhythm":
+		case "Solo":
+			sfx["click2"].play()
+			// remove this shit
+			setTimeout(() => {sfx["click3"].play()}, 2000)
+			
+	}
 
-
-				setTimeout(() => {
-					menuDebounce = true
-					for (let v of ["top", "middle", "bottom"]) {
-						let newText = prevButtons[v]
-						buttons.divs[v].html(newText)
-						buttons.divs[v].style(`opacity: 0.9; background-color: ${buttons.uColour[newText]}; width: ${buttons.width[newText]}vw`)
-					}
-				}, 750)
-			} else {menuDebounce = true}
-
-
-
-
-		} else if (["Play", "Puzzles"].includes(clickedButton)) { // every other button
+	if (clickedButton === "Back") { ///// If back button pressed
+		mode = "menu"
+		backDebounce = false
+		sfx["back"].play()
+		if (buttons.divs["top"].html() !== "Play") {
+			let prevButtons
 			for (let div in buttons.divs) {
 				buttons.divs[div].style("opacity: 0; width: 0vw")
-				sfx[buttons.sound[this.html()]].play()
+			}
+
+			switch (buttons.divs["top"].html()) {
+				case "Standard":
+				case "Classic": // Remove back button
+					backButton.style("opacity: 0; background-color: #4A4A4A; width: 0vw; left: 100vw")
+					prevButtons = {
+						"top": "Play",
+						"middle": "Puzzles",
+						"bottom": "Credits"
+					}; break
+			}
+
+
+			setTimeout(() => {
+				menuDebounce = true
+				backDebounce = true
+				for (let v of ["top", "middle", "bottom"]) {
+					let newText = prevButtons[v]
+					buttons.divs[v].html(newText)
+					buttons.divs[v].style(`opacity: 0.9; background-color: ${buttons.uColour[newText]}; width: ${buttons.width[newText]}vw`)
+				}
+			}, 750)
+		} else {menuDebounce = true}
+
+
+	} else if (menuDebounce && mode === "menu") {
+		menuDebounce = false
+
+  		if (["Play", "Puzzles"].includes(clickedButton)) { // every other button
+			for (let div in buttons.divs) {
+				buttons.divs[div].style("opacity: 0; width: 0vw")
 
 				setTimeout(() => {
 					menuDebounce = true // Bring back back button
@@ -748,14 +768,27 @@ function mouseClickedElement() {
 					}			
 				}, 750)
 			}
-		} else if (clickedButton === "Standard") {
-			mode = "game"
+		} else if (clickedButton === "Standard") { ///// Standard Gamemode /////
+			clickedTime = time
+			currentTransition = ["shutter", "bounce"]
 			backButton.style("opacity: 0; background-color: #4A4A4A; width: 0vw; left: 100vw")
 			for (let v of ["top", "middle", "bottom"]) {
 				let newText = buttons.divs[v].html()
 				buttons.divs[v].html(newText)
 				buttons.divs[v].style(`opacity: 0; background-color: ${buttons.uColour[newText]}; width: 0vw`)
-			}	
+			}
+			
+			setTimeout(() => {
+				mode = "game"
+				clickedTime = time
+				currentTransition = ["part", "sine"]
+				
+				setTimeout(() => {
+					menuDebounce = true
+					currentTransition = [null, null]
+					backButton.style("width: 14vw; left: 85vw; opacity: 0.9; background-color: #4A4A4A")
+				}, 2000)
+			}, 2000)
 		} else { // In progress gamemodes
 			menuDebounce = true
 			sfx["error"].play()
@@ -943,10 +976,6 @@ function keyPressed() {
 			game = new Chess(startFEN)
 			break
 
-		case "m":
-			transitionStart = new Date().getTime()
-			break
-
 		case "q":
 			printHistory()
 			break
@@ -1004,4 +1033,3 @@ class AlephInfinity extends Bot {
 		
 	}
 }
-
