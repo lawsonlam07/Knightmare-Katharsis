@@ -6,7 +6,7 @@ Currently, you can move the pieces, highlight squares and draw arrows.
 
 Update 2: Moves have been validated.
 
-Update 3: Menu System almost Finished
+Update 3: Menu System almost finished.
 
 ---
 
