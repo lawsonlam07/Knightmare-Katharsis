@@ -2,6 +2,7 @@ let startFEN = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR"
 let randomFEN = "bbrknnqr/pppppppp/8/8/8/8/PPPPPPPP/BBRKNNQR"
 let newFEN = "rn1qkb1r/pp2pppp/2p2n2/5b2/P1pP3N/2N5/1P2PPPP/R1BQKB1R"
 
+let backTime = 0
 let clickedTime = 0
 let currentTransition = [null, null]
 let mouseBuffer = [false, false, false]
@@ -61,10 +62,10 @@ function preload() {
 }
 
 function setup() {
-	//songs["checkmate"].loop()
+	// songs["checkmate"].loop()
 	createCanvas(windowWidth, windowHeight)
 	textFont(kodeMono)
-	game = new Chess(startFEN)
+	game = new Chess(newFEN)
 
 	backButton = createDiv("Back")
 	backButton.style(menuButtonStyle + `
@@ -201,6 +202,9 @@ class Chess { // Main Section of Code
 		this.highlightSquares = []
 		this.arrowSquares = []
 		this.moveHistory = []
+		this.whiteTime = 600000
+		this.blackTime = 600000
+		this.moveTime = new Date().getTime()
 		this.mode = "board"
 		this.turn = true
 		this.flip = true
@@ -238,6 +242,8 @@ class Chess { // Main Section of Code
 		} return bitboards
 	}
 
+	convertTime(time) {return `${Math.floor(time/60)}:${(abs(time%60)).toLocaleString('en-US', {minimumIntegerDigits: 2})}`}
+
 	getNotation(x, y) {return `${String.fromCharCode(96+x)}${9-y}`}
 
 	inBounds(x, y) {return max(x, y) < 9 && min(x, y) > 0}
@@ -273,6 +279,10 @@ class Chess { // Main Section of Code
 
 	draw() { // Where it all happens...
 		// this.highlightSquares = this.bitboards["P"]
+		if (this.turn) {this.whiteTime = max(this.whiteTime - (time - this.moveTime), 0)}
+		else {this.blackTime = max(this.blackTime - (time - this.moveTime), 0)}
+		this.moveTime = time // Timer Stuff
+
 		push()
 		stroke(0, 0)
 		this.drawShadow()
@@ -282,6 +292,8 @@ class Chess { // Main Section of Code
 		this.drawPosFromBoard()
 		this.showLegalMoves()
 		this.drawArrowSquares()
+		this.drawTimer()
+		if ((windowWidth/windowHeight) >= 2.05) {this.drawNotation()}
 		if (this.mode === "promo") {this.promotionUI()}
 		pop()
 	}
@@ -294,6 +306,56 @@ class Chess { // Main Section of Code
 				square((x*decile), (y*decile), decile)
 			}
 		}	
+	}
+
+	drawTimer() {
+		push()
+		rectMode(CENTER)
+		textAlign(CENTER)
+		textSize(windowHeight*(15/100))
+		let whiteTimePos = this.flip ? 6.5 : 4.5
+		let blackTimePos = this.flip ? 4.5 : 6.5
+		let alpha = mode === "game" ? 255 : 255 - (255 * factor(backTime, 500, "sine"))
+		fill(200, alpha)
+		rect(12.25*decile, 5*decile, 5*decile, 0.1*decile, decile)
+		fill(...this.whiteTime >= 59000 ? [200] : [255, 51, 0], alpha)
+		text(this.convertTime(Math.ceil(this.whiteTime/1000)), 12.25*decile, whiteTimePos*decile)
+		fill(...this.blackTime >= 59000 ? [200] : [255, 51, 0], alpha)
+		text(this.convertTime(Math.ceil(this.blackTime/1000)), 12.25*decile, blackTimePos*decile)
+		pop()
+	}
+
+	drawNotation() {
+		push()
+		fill(200)
+		textAlign(CENTER)
+		textSize(windowHeight*(5/100)) 
+		let maxDisplay = floor((windowHeight/decile)/0.75 - 2.5)
+		let offset = max(0, ceil(this.move/2) - maxDisplay)
+		let pairs = []
+		for (let i = 0; i < this.moveHistory.length; i += 2) {
+			pairs.push([this.moveHistory[i], this.moveHistory[i+1]])
+		}
+
+		for (let i = offset; i < min(pairs.length, offset + maxDisplay); i++) {
+			let [w, b] = pairs[i]
+			text(offset, mouseX, mouseY)
+			let isWhiteCurrentMove = this.move === 2*(i+1) + offset - 1
+			let isBlackCurrentMove = this.move === 2*(i+1) + offset
+
+			fill(isWhiteCurrentMove ? 235 : 200)
+			textSize(windowHeight*((isWhiteCurrentMove ? 5.5 : 5)/100))
+			text(w, decile * 16.75, decile * (0.75*(i-offset)+2.5))
+
+			fill(isBlackCurrentMove ? 235 : 200)
+			textSize(windowHeight*((isBlackCurrentMove ? 5.5 : 5)/100))
+			text(b, windowWidth - decile * 1.75, decile * (0.75*(i-offset)+2.5))
+
+			fill(255)
+			textSize(windowHeight*(6/100))
+			text(i+1+offset, (decile * 16.75 + (windowWidth - decile * 1.75))/2, decile * (0.75*(i-offset)+2.5))
+		}
+		pop()
 	}
 
 	drawShadow() {
@@ -531,18 +593,18 @@ class Chess { // Main Section of Code
 						}
 					}
 				}
-				if (colour) { // Checks that every square between the king and rook is empty; AMEND FOR CHESS960 // || v[0] === this.rookStartX[0] || v[0] === this.bitboards["K"][0][0])) {
-					if (this.canCastle[0] && this.tween(6, 8, 1, 8).every(v => this.board[v[1]-1][v[0]-1] === "#" && !this.isCheck(v[0], v[1], colour, this.bitboards, this.board))) {
+				if (colour && (this.moveHistory.length === 0 || this.moveHistory[this.moveHistory.length-1].slice(-1) !== "+")) { // Checks that every square between the king and rook is empty; AMEND FOR CHESS960 // || v[0] === this.rookStartX[0] || v[0] === this.bitboards["K"][0][0])) {
+					if (this.canCastle[0] && this.tween(5, 8, 1, 8).every(v => this.board[v[1]-1][v[0]-1] === "#" && !this.isCheck(v[0], v[1], colour, this.bitboards, this.board))) {
 						pseudoLegalMoves.push([x1-2, y1]) // Check if the player is castling through check, NOTE THAT THE CASTLING THROUGH CHECK BIT IS HARDCODED
 					}
-					if (this.canCastle[1] && this.tween(4, 8, 8, 8).every(v => this.board[v[1]-1][v[0]-1] === "#" && !this.isCheck(v[0], v[1], colour, this.bitboards, this.board))) {
+					if (this.canCastle[1] && this.tween(5, 8, 8, 8).every(v => this.board[v[1]-1][v[0]-1] === "#" && !this.isCheck(v[0], v[1], colour, this.bitboards, this.board))) {
 						pseudoLegalMoves.push([x1+2, y1])
 					}
 				} else {
-					if (this.canCastle[2] && this.tween(6, 1, 1, 1).every(v => this.board[v[1]-1][v[0]-1] === "#" && !this.isCheck(v[0], v[1], colour, this.bitboards, this.board))) {
+					if (this.canCastle[2] && this.tween(5, 1, 1, 1).every(v => this.board[v[1]-1][v[0]-1] === "#" && !this.isCheck(v[0], v[1], colour, this.bitboards, this.board))) {
 						pseudoLegalMoves.push([x1-2, y1])
 					}
-					if (this.canCastle[3] && this.tween(4, 1, 8, 1).every(v => this.board[v[1]-1][v[0]-1] === "#" && !this.isCheck(v[0], v[1], colour, this.bitboards, this.board))) {
+					if (this.canCastle[3] && this.tween(5, 1, 8, 1).every(v => this.board[v[1]-1][v[0]-1] === "#" && !this.isCheck(v[0], v[1], colour, this.bitboards, this.board))) {
 						pseudoLegalMoves.push([x1+2, y1])
 					}
 				}
@@ -698,26 +760,26 @@ function mouseNotHover() {
 function mouseClickedElement() {
 	let clickedButton = this.html()
 
-	switch (clickedButton) {
-		case "Play":
-		case "Puzzles":
-		case "Credits":
-			sfx["click1"].play()
-			break
-
-		case "Standard":
-		case "Chess960":
-		case "Custom":
-		case "Classic":
-		case "Rhythm":
-		case "Solo":
-			sfx["click2"].play()
-			// remove this shit
-			setTimeout(() => {sfx["click3"].play()}, 2000)
-			
+	if (menuDebounce && mode === "menu") {
+		switch (clickedButton) {
+			case "Play":
+			case "Puzzles":
+			case "Credits":
+				sfx["click1"].play()
+				break
+	
+			case "Standard":
+			case "Chess960":
+			case "Custom":
+			case "Classic":
+			case "Rhythm":
+			case "Solo":
+				sfx["click2"].play()
+		}
 	}
 
 	if (clickedButton === "Back") { ///// If back button pressed
+		if (mode === "game") {backTime = time}
 		mode = "menu"
 		backDebounce = false
 		sfx["back"].play()
@@ -780,6 +842,7 @@ function mouseClickedElement() {
 			
 			setTimeout(() => {
 				mode = "game"
+				game = new Chess(startFEN)
 				clickedTime = time
 				currentTransition = ["part", "sine"]
 				
@@ -873,20 +936,6 @@ function factor(start, duration, style="linear") {
 	}
 }
 
-function printHistory() {
-	let moves = document.createElement("textarea")
-	let moveList = []
-	for (let i = 0; i < game.moveHistory.length; i += 2) {
-		moveList.push(`${floor(i/2)+1}. ${game.moveHistory.slice(i, i + 2).join(" ")}`)
-	}
-	document.body.appendChild(moves)
-	console.log(moveList.join("     "))
-	moves.value = moveList.join("     ")
-	moves.select()
-	document.execCommand("copy")
-	moves.remove()
-}
-
 function getRankandFileFromMouse(x, y) {
 	if (min(x,y) > decile && max(x,y) < 9 * decile) {
 		let rank = floor(x/decile)
@@ -976,10 +1025,6 @@ function keyPressed() {
 			game = new Chess(startFEN)
 			break
 
-		case "q":
-			printHistory()
-			break
-
 		case "ArrowLeft":
 			game.move = max(game.move-1, 0)
 			break
@@ -998,37 +1043,31 @@ function keyPressed() {
 	}
 }
 
-class Bot extends Chess {
+class Fortuna extends Chess {
 	constructor() {
 
 	}
 }
 
-class Fortuna extends Bot {
-	constructor() {
-
-	}
-}
-
-class Parallax extends Bot {
+class Parallax extends Fortuna {
 	constructor() {
 		
 	}
 }
 
-class Astranaught extends Bot {
+class Astranaught extends Parallax {
 	constructor() {
 		
 	}
 }
 
-class Lazaward extends Bot {
+class Lazaward extends Astranaught {
 	constructor() {
 		
 	}
 }
 
-class AlephInfinity extends Bot {
+class AlephInfinity extends Lazaward {
 	constructor() {
 		
 	}
