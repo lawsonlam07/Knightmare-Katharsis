@@ -205,6 +205,8 @@ class Chess { // Main Section of Code
 		this.whiteTime = 600000
 		this.blackTime = 600000
 		this.moveTime = new Date().getTime()
+		this.whitePlayer = "Human"
+		this.blackPlayer = "Human"
 		this.mode = "board"
 		this.turn = true
 		this.flip = true
@@ -293,6 +295,7 @@ class Chess { // Main Section of Code
 		this.showLegalMoves()
 		this.drawArrowSquares()
 		this.drawTimer()
+		//this.drawIcons()
 		if ((windowWidth/windowHeight) >= 2.05) {this.drawNotation()}
 		if (this.mode === "promo") {this.promotionUI()}
 		pop()
@@ -325,13 +328,43 @@ class Chess { // Main Section of Code
 		pop()
 	}
 
+	drawIcons() {
+		push()
+		let alpha = mode === "game" ? 255 : 255 - (255 * factor(backTime, 500, "sine"))
+		textAlign(CENTER)
+		textSize(windowHeight/10)
+		fill(200)
+		text(this.whitePlayer, decile*9, decile)
+		text(this.blackPlayer, decile*9, decile*8)
+		pop()
+	}
+
 	drawNotation() {
 		push()
 		fill(200)
+		rectMode(CENTER)
 		textAlign(CENTER)
-		textSize(windowHeight*(5/100)) 
-		let maxDisplay = floor((windowHeight/decile)/0.75 - 2.5)
+		textSize(windowHeight*(5/100))
+		let maxDisplay = floor(((windowHeight*0.8)/decile)/0.75 - 2.5)
 		let offset = max(0, ceil(this.move/2) - maxDisplay)
+		let alpha = mode === "game" ? 255 : 255 - (255 * factor(backTime, 500, "sine"))
+		let buttonWidth = decile * 16.75 + (windowWidth - decile * 1.75)
+		let _buttonWidth = decile * 16.75 - (windowWidth - decile * 1.75)
+		push()
+		textStyle(BOLD)
+		textSize(windowHeight*(15/100))
+		fill(200, alpha)
+		rect(buttonWidth/2 + _buttonWidth*0.5625, decile*(0.75*maxDisplay + 2.5), _buttonWidth*0.33, decile, decile/5)
+		rect(buttonWidth/2 + _buttonWidth*0.1875, decile*(0.75*maxDisplay + 2.5), _buttonWidth*0.33, decile, decile/5)
+		rect(buttonWidth/2 - _buttonWidth*0.1875, decile*(0.75*maxDisplay + 2.5), _buttonWidth*0.33, decile, decile/5)
+		rect(buttonWidth/2 - _buttonWidth*0.5625, decile*(0.75*maxDisplay + 2.5), _buttonWidth*0.33, decile, decile/5)
+		fill(50, alpha)
+		text("«", buttonWidth/2 + _buttonWidth*0.5625, decile*(0.75*maxDisplay + 2.95))
+		text("‹", buttonWidth/2 + _buttonWidth*0.1875, decile*(0.75*maxDisplay + 2.95))
+		text("›", buttonWidth/2 - _buttonWidth*0.1875, decile*(0.75*maxDisplay + 2.95))
+		text("»", buttonWidth/2 - _buttonWidth*0.5625, decile*(0.75*maxDisplay + 2.95))
+		pop()
+
 		let pairs = []
 		for (let i = 0; i < this.moveHistory.length; i += 2) {
 			pairs.push([this.moveHistory[i], this.moveHistory[i+1]])
@@ -339,21 +372,20 @@ class Chess { // Main Section of Code
 
 		for (let i = offset; i < min(pairs.length, offset + maxDisplay); i++) {
 			let [w, b] = pairs[i]
-			text(offset, mouseX, mouseY)
-			let isWhiteCurrentMove = this.move === 2*(i+1) + offset - 1
-			let isBlackCurrentMove = this.move === 2*(i+1) + offset
+			let isWhiteCurrentMove = this.move === 2*(i+1) - 1
+			let isBlackCurrentMove = this.move === 2*(i+1)
 
-			fill(isWhiteCurrentMove ? 235 : 200)
+			fill(isWhiteCurrentMove ? 225 : 200, alpha)
 			textSize(windowHeight*((isWhiteCurrentMove ? 5.5 : 5)/100))
 			text(w, decile * 16.75, decile * (0.75*(i-offset)+2.5))
 
-			fill(isBlackCurrentMove ? 235 : 200)
+			fill(isBlackCurrentMove ? 225 : 200, alpha)
 			textSize(windowHeight*((isBlackCurrentMove ? 5.5 : 5)/100))
 			text(b, windowWidth - decile * 1.75, decile * (0.75*(i-offset)+2.5))
 
-			fill(255)
+			fill(isWhiteCurrentMove || isBlackCurrentMove ? 255 : 200, alpha)
 			textSize(windowHeight*(6/100))
-			text(i+1+offset, (decile * 16.75 + (windowWidth - decile * 1.75))/2, decile * (0.75*(i-offset)+2.5))
+			text(i+1, (decile * 16.75 + (windowWidth - decile * 1.75))/2, decile * (0.75*(i-offset)+2.5))
 		}
 		pop()
 	}
@@ -949,7 +981,7 @@ function getRankandFileFromMouse(x, y) {
 function mousePressed() {
 	[rank, file] = getRankandFileFromMouse(mouseX, mouseY)
 	if (mouseButton === LEFT) {
-		game.highlightSquares = []; game.arrowSquares = []; game.move = game.boardHistory.length - 1
+		game.highlightSquares = []; game.arrowSquares = []
 		if (game.mode === "promo") { // Promotion
 			if (min(rank, file) >= 4 && max(rank, file) <= 5) {
 				let piece
@@ -985,6 +1017,20 @@ function mousePressed() {
 			mouseBuffer = [rank, file, mouseButton]
 		} else {mouseBuffer = [false, false, false]}
 	} else {mouseBuffer = [false, false, false]}
+
+	if (decile*8 <= mouseY && mouseY <= decile*9) { // Move History Buttons
+		let buttonWidth = decile * 16.75 + (windowWidth - decile * 1.75)
+		let _buttonWidth = decile * 16.75 - (windowWidth - decile * 1.75)
+		if (buttonWidth/2 + _buttonWidth*0.7275 <= mouseX && mouseX <= buttonWidth/2 + _buttonWidth*0.3975) {
+			game.move = 0
+		} else if (buttonWidth/2 + _buttonWidth*0.3525 <= mouseX && mouseX <= buttonWidth/2 + _buttonWidth*0.0225) {
+			game.move = max(game.move-1, 0)
+		} else if (buttonWidth/2 - _buttonWidth*0.0225 <= mouseX && mouseX <= buttonWidth/2 - _buttonWidth*0.3525) {
+			game.move = min(game.move+1, game.boardHistory.length-1)
+		} else if (buttonWidth/2 - _buttonWidth*0.3975 <= mouseX && mouseX <= buttonWidth/2 - _buttonWidth*0.7275) {
+			game.move = game.boardHistory.length - 1
+		} else {game.move = game.boardHistory.length - 1}
+	} else {game.move = game.boardHistory.length - 1}
 }
 
 function mouseReleased() {
