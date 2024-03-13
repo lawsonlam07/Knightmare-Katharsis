@@ -62,7 +62,7 @@ function preload() {
 }
 
 function setup() {
-	// songs["checkmate"].loop()
+	//songs["checkmate"].loop()
 	createCanvas(windowWidth, windowHeight)
 	textFont(kodeMono)
 	game = new Chess(newFEN)
@@ -296,7 +296,7 @@ class Chess { // Main Section of Code
 		this.drawArrowSquares()
 		this.drawTimer()
 		//this.drawIcons()
-		if ((windowWidth/windowHeight) >= 2.05) {this.drawNotation()}
+		if ((windowWidth/windowHeight) >= 1.95) {this.drawNotation()}
 		if (this.mode === "promo") {this.promotionUI()}
 		pop()
 	}
@@ -315,16 +315,16 @@ class Chess { // Main Section of Code
 		push()
 		rectMode(CENTER)
 		textAlign(CENTER)
-		textSize(windowHeight*(15/100))
-		let whiteTimePos = this.flip ? 6.5 : 4.5
-		let blackTimePos = this.flip ? 4.5 : 6.5
+		textSize(windowHeight*(12.5/100))
+		let whiteTimePos = this.flip ? 6.3 : 4.6
+		let blackTimePos = this.flip ? 4.6 : 6.3
 		let alpha = mode === "game" ? 255 : 255 - (255 * factor(backTime, 500, "sine"))
 		fill(200, alpha)
-		rect(12.25*decile, 5*decile, 5*decile, 0.1*decile, decile)
+		rect(11.75*decile, 5*decile, 4*decile, 0.1*decile, decile)
 		fill(...this.whiteTime >= 59000 ? [200] : [255, 51, 0], alpha)
-		text(this.convertTime(Math.ceil(this.whiteTime/1000)), 12.25*decile, whiteTimePos*decile)
+		text(this.convertTime(Math.ceil(this.whiteTime/1000)), 11.75*decile, whiteTimePos*decile)
 		fill(...this.blackTime >= 59000 ? [200] : [255, 51, 0], alpha)
-		text(this.convertTime(Math.ceil(this.blackTime/1000)), 12.25*decile, blackTimePos*decile)
+		text(this.convertTime(Math.ceil(this.blackTime/1000)), 11.75*decile, blackTimePos*decile)
 		pop()
 	}
 
@@ -348,8 +348,8 @@ class Chess { // Main Section of Code
 		let maxDisplay = floor(((windowHeight*0.8)/decile)/0.75 - 2.5)
 		let offset = max(0, ceil(this.move/2) - maxDisplay)
 		let alpha = mode === "game" ? 255 : 255 - (255 * factor(backTime, 500, "sine"))
-		let buttonWidth = decile * 16.75 + (windowWidth - decile * 1.75)
-		let _buttonWidth = decile * 16.75 - (windowWidth - decile * 1.75)
+		let buttonWidth = decile * 15.25 + (windowWidth - decile * 1.75)
+		let _buttonWidth = decile * 15.25 - (windowWidth - decile * 1.75)
 		push()
 		textStyle(BOLD)
 		textSize(windowHeight*(15/100))
@@ -377,7 +377,7 @@ class Chess { // Main Section of Code
 
 			fill(isWhiteCurrentMove ? 225 : 200, alpha)
 			textSize(windowHeight*((isWhiteCurrentMove ? 5.5 : 5)/100))
-			text(w, decile * 16.75, decile * (0.75*(i-offset)+2.5))
+			text(w, decile * 15.25, decile * (0.75*(i-offset)+2.5))
 
 			fill(isBlackCurrentMove ? 225 : 200, alpha)
 			textSize(windowHeight*((isBlackCurrentMove ? 5.5 : 5)/100))
@@ -385,7 +385,7 @@ class Chess { // Main Section of Code
 
 			fill(isWhiteCurrentMove || isBlackCurrentMove ? 255 : 200, alpha)
 			textSize(windowHeight*(6/100))
-			text(i+1, (decile * 16.75 + (windowWidth - decile * 1.75))/2, decile * (0.75*(i-offset)+2.5))
+			text(i+1, (decile * 15.25 + (windowWidth - decile * 1.75))/2, decile * (0.75*(i-offset)+2.5))
 		}
 		pop()
 	}
@@ -1019,8 +1019,8 @@ function mousePressed() {
 	} else {mouseBuffer = [false, false, false]}
 
 	if (decile*8 <= mouseY && mouseY <= decile*9) { // Move History Buttons
-		let buttonWidth = decile * 16.75 + (windowWidth - decile * 1.75)
-		let _buttonWidth = decile * 16.75 - (windowWidth - decile * 1.75)
+		let buttonWidth = decile * 15.25 + (windowWidth - decile * 1.75)
+		let _buttonWidth = decile * 15.25 - (windowWidth - decile * 1.75)
 		if (buttonWidth/2 + _buttonWidth*0.7275 <= mouseX && mouseX <= buttonWidth/2 + _buttonWidth*0.3975) {
 			game.move = 0
 		} else if (buttonWidth/2 + _buttonWidth*0.3525 <= mouseX && mouseX <= buttonWidth/2 + _buttonWidth*0.0225) {
