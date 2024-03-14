@@ -195,10 +195,10 @@ function draw() {
 class Chess { // Main Section of Code
 	constructor(fen) {
 		this.boardHistory = [this.initiateBoard(fen)]
-		this.bitboards = this.getBitboards(fen)
+		this.bitboards = [this.getBitboards(fen)]
 		this.board = this.initiateBoard(fen)
 		this.promoSquare = [false, false]
-		this.canCastle = [true, true, true, true]
+		this.canCastle = [[true, true, true, true]]
 		this.highlightSquares = []
 		this.arrowSquares = []
 		this.moveHistory = []
@@ -280,7 +280,7 @@ class Chess { // Main Section of Code
 	////////// Front End - User Interface //////////
 
 	draw() { // Where it all happens...
-		// this.highlightSquares = this.bitboards["P"]
+		//this.highlightSquares = this.bitboards[this.bitboards.length-1]["P"]
 		if (this.turn) {this.whiteTime = max(this.whiteTime - (time - this.moveTime), 0)}
 		else {this.blackTime = max(this.blackTime - (time - this.moveTime), 0)}
 		this.moveTime = time // Timer Stuff
@@ -490,8 +490,8 @@ class Chess { // Main Section of Code
 	updateAttributes(move) {
 		this.board = move[0]
 		this.boardHistory.push(move[0])
-		this.canCastle = move[1]
-		this.bitboards = move[2]
+		this.canCastle.push(move[1])
+		this.bitboards.push(move[2])
 		this.moveHistory.push(move[3])
 		this.move = this.boardHistory.length - 1
 		this.turn = !this.turn
@@ -626,17 +626,17 @@ class Chess { // Main Section of Code
 					}
 				}
 				if (colour && (this.moveHistory.length === 0 || this.moveHistory[this.moveHistory.length-1].slice(-1) !== "+")) { // Checks that every square between the king and rook is empty; AMEND FOR CHESS960 // || v[0] === this.rookStartX[0] || v[0] === this.bitboards["K"][0][0])) {
-					if (this.canCastle[0] && this.tween(5, 8, 1, 8).every(v => this.board[v[1]-1][v[0]-1] === "#" && !this.isCheck(v[0], v[1], colour, this.bitboards, this.board))) {
+					if (this.canCastle[this.canCastle.length-1][0] && this.tween(5, 8, 1, 8).every(v => this.board[v[1]-1][v[0]-1] === "#" && !this.isCheck(v[0], v[1], colour, this.bitboards[this.bitboards.length-1], this.board))) {
 						pseudoLegalMoves.push([x1-2, y1]) // Check if the player is castling through check, NOTE THAT THE CASTLING THROUGH CHECK BIT IS HARDCODED
 					}
-					if (this.canCastle[1] && this.tween(5, 8, 8, 8).every(v => this.board[v[1]-1][v[0]-1] === "#" && !this.isCheck(v[0], v[1], colour, this.bitboards, this.board))) {
+					if (this.canCastle[this.canCastle.length-1][1] && this.tween(5, 8, 8, 8).every(v => this.board[v[1]-1][v[0]-1] === "#" && !this.isCheck(v[0], v[1], colour, this.bitboards[this.bitboards.length-1], this.board))) {
 						pseudoLegalMoves.push([x1+2, y1])
 					}
 				} else {
-					if (this.canCastle[2] && this.tween(5, 1, 1, 1).every(v => this.board[v[1]-1][v[0]-1] === "#" && !this.isCheck(v[0], v[1], colour, this.bitboards, this.board))) {
+					if (this.canCastle[this.canCastle.length-1][2] && this.tween(5, 1, 1, 1).every(v => this.board[v[1]-1][v[0]-1] === "#" && !this.isCheck(v[0], v[1], colour, this.bitboards[this.bitboards.length-1], this.board))) {
 						pseudoLegalMoves.push([x1-2, y1])
 					}
-					if (this.canCastle[3] && this.tween(5, 1, 8, 1).every(v => this.board[v[1]-1][v[0]-1] === "#" && !this.isCheck(v[0], v[1], colour, this.bitboards, this.board))) {
+					if (this.canCastle[this.canCastle.length-1][3] && this.tween(5, 1, 8, 1).every(v => this.board[v[1]-1][v[0]-1] === "#" && !this.isCheck(v[0], v[1], colour, this.bitboards[this.bitboards.length-1], this.board))) {
 						pseudoLegalMoves.push([x1+2, y1])
 					}
 				}
@@ -644,7 +644,7 @@ class Chess { // Main Section of Code
 		}
 
 		for (let v of pseudoLegalMoves) { // Final Move Validation
-			let newBoard = this.handleMove(x1, y1, v[0], v[1], piece, this.copyBitboard(this.bitboards), this.copyBoard(this.board), [...this.canCastle], true)
+			let newBoard = this.handleMove(x1, y1, v[0], v[1], piece, this.copyBitboard(this.bitboards[this.bitboards.length-1]), this.copyBoard(this.board), [...this.canCastle], true)
 			if (!this.isCheck(...newBoard[2][this.turn ? "K" : "k"][0], colour, newBoard[2], newBoard[0])) {
 				legalMoves.push([v[0], v[1]])
 			}
@@ -994,11 +994,11 @@ function mousePressed() {
 				} else if (rank === 5 && file === 5) {
 					piece = !game.turn ? "B" : "b"
 				} // Add promotion check here
-				game.bitboards[piece].push([game.promoSquare[0], game.promoSquare[1]])
+				game.bitboards[game.bitboards.length-1][piece].push([game.promoSquare[0], game.promoSquare[1]])
 				game.board[game.promoSquare[1]-1][game.promoSquare[0]-1] = piece
 				game.boardHistory[game.boardHistory.length-1][game.promoSquare[1]-1][game.promoSquare[0]-1] = piece
 				game.moveHistory[game.moveHistory.length-1] += "=" + piece.toUpperCase()
-				if (game.isCheck(...game.bitboards[!game.turn ? "k" : "K"][0], game.turn, game.bitboards, game.board)) {
+				if (game.isCheck(...game.bitboards[game.bitboards.length-1][!game.turn ? "k" : "K"][0], game.turn, game.bitboards[game.bitboards.length-1], game.board)) {
 					game.moveHistory[game.moveHistory.length-1] += "+"
 				} game.mode = "board"
 			}
@@ -1009,7 +1009,7 @@ function mousePressed() {
 		if (mouseBuffer[2] === true && mouseButton === LEFT) {
 			if ((mouseBuffer[0] !== rank || mouseBuffer[1] !== file) && mouseButton === LEFT) {
 				let piece = game.board[mouseBuffer[1] - 1][mouseBuffer[0] - 1]
-				let move = game.handleMove(mouseBuffer[0], mouseBuffer[1], rank, file, piece, game.copyBitboard(game.bitboards), game.copyBoard(game.board), [...game.canCastle])
+				let move = game.handleMove(mouseBuffer[0], mouseBuffer[1], rank, file, piece, game.copyBitboard(game.bitboards[game.bitboards.length-1]), game.copyBoard(game.board), [...game.canCastle[game.canCastle.length-1]])
 				if (move) {game.updateAttributes(move)}
 			} mouseBuffer = [false, false, false]
 			
@@ -1029,8 +1029,8 @@ function mousePressed() {
 			game.move = min(game.move+1, game.boardHistory.length-1)
 		} else if (buttonWidth/2 - _buttonWidth*0.3975 <= mouseX && mouseX <= buttonWidth/2 - _buttonWidth*0.7275) {
 			game.move = game.boardHistory.length - 1
-		} else {game.move = game.boardHistory.length - 1}
-	} else {game.move = game.boardHistory.length - 1}
+		}
+	} if (rank && file) {game.move = game.boardHistory.length - 1}
 }
 
 function mouseReleased() {
@@ -1050,7 +1050,7 @@ function mouseReleased() {
 	} else if (mouseBuffer[2] === LEFT && (mouseBuffer[0] !== rank || mouseBuffer[1] !== file)) { // Handle Move
 		let piece = game.board[mouseBuffer[1] - 1][mouseBuffer[0] - 1]
 		if (game.getColour(piece) === game.turn && piece !== "#") {
-			let move = game.handleMove(mouseBuffer[0], mouseBuffer[1], rank, file, piece, game.copyBitboard(game.bitboards), game.copyBoard(game.board), [...game.canCastle])
+			let move = game.handleMove(mouseBuffer[0], mouseBuffer[1], rank, file, piece, game.copyBitboard(game.bitboards[game.bitboards.length-1]), game.copyBoard(game.board), [...game.canCastle[game.canCastle.length-1]])
 			if (move) {game.updateAttributes(move)}
 		}
 	} else if (mouseBuffer[2] === LEFT && (mouseBuffer[0] === rank && mouseBuffer[1] === file)) { // Possible Move
@@ -1070,6 +1070,17 @@ function keyPressed() {
 		case "r":
 			game = new Chess(startFEN)
 			break
+
+		case "u":
+			if (game.moveHistory.length !== 0) {
+				game.turn = !game.turn
+				game.bitboards.pop()
+				game.moveHistory.pop()
+				game.boardHistory.pop()
+				game.canCastle.pop()
+				game.move = game.boardHistory.length
+				game.board = game.copyBoard(game.boardHistory[game.boardHistory.length-1])
+			}
 
 		case "ArrowLeft":
 			game.move = max(game.move-1, 0)
@@ -1118,4 +1129,3 @@ class AlephInfinity extends Lazaward {
 		
 	}
 }
-
