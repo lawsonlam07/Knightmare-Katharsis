@@ -10,6 +10,8 @@ let menuDebounce = true, backDebounce = true
 let decile, game, time
 let mode = "menu"
 
+// Bugfixes completed: Promo time using opponents'; undo time
+
 let menuButtonStyle = `
 	transition: background-color 0.5s, width 0.5s, opacity 0.5s, left 0.5s;
 	font-family: kodeMono, Courier New, Arial, serif;
@@ -57,6 +59,9 @@ function preload() {
 	}
 	songs = {
 		"checkmate": loadSound("Songs/checkmate.mp3")
+	}
+	icons = {
+		"Human": loadImage("Icons/human.png")
 	}
 	kodeMono = loadFont("Font/KodeMono.ttf")
 }
@@ -202,6 +207,8 @@ class Chess { // Main Section of Code
 		this.highlightSquares = []
 		this.arrowSquares = []
 		this.moveHistory = []
+		this.whiteTimeHistory = [600000]
+		this.blackTimeHistory = [600000]
 		this.whiteTime = 600000
 		this.blackTime = 600000
 		this.moveTime = new Date().getTime()
@@ -295,7 +302,9 @@ class Chess { // Main Section of Code
 		this.showLegalMoves()
 		this.drawArrowSquares()
 		this.drawTimer()
-		//this.drawIcons()
+		this.drawIcons()
+		this.drawUtility()
+		this.drawPieceDeficit()
 		if ((windowWidth/windowHeight) >= 1.95) {this.drawNotation()}
 		if (this.mode === "promo") {this.promotionUI()}
 		pop()
@@ -320,11 +329,11 @@ class Chess { // Main Section of Code
 		let blackTimePos = this.flip ? 4.6 : 6.3
 		let alpha = mode === "game" ? 255 : 255 - (255 * factor(backTime, 500, "sine"))
 		fill(200, alpha)
-		rect(11.75*decile, 5*decile, 4*decile, 0.1*decile, decile)
+		rect(11.4*decile, 5*decile, 4*decile, 0.1*decile, decile)
 		fill(...this.whiteTime >= 59000 ? [200] : [255, 51, 0], alpha)
-		text(this.convertTime(Math.ceil(this.whiteTime/1000)), 11.75*decile, whiteTimePos*decile)
+		text(this.convertTime(Math.ceil(this.whiteTime/1000)), 11.4*decile, whiteTimePos*decile)
 		fill(...this.blackTime >= 59000 ? [200] : [255, 51, 0], alpha)
-		text(this.convertTime(Math.ceil(this.blackTime/1000)), 11.75*decile, blackTimePos*decile)
+		text(this.convertTime(Math.ceil(this.blackTime/1000)), 11.4*decile, blackTimePos*decile)
 		pop()
 	}
 
@@ -333,10 +342,36 @@ class Chess { // Main Section of Code
 		let alpha = mode === "game" ? 255 : 255 - (255 * factor(backTime, 500, "sine"))
 		textAlign(CENTER)
 		textSize(windowHeight/10)
-		fill(200)
-		text(this.whitePlayer, decile*9, decile)
-		text(this.blackPlayer, decile*9, decile*8)
+		fill(200, alpha)
+		tint(255, alpha)
+		let whiteTextPos = this.flip ? 8.85 : 1.85
+		let blackTextPos = this.flip ? 1.85 : 8.85
+		let whiteIconPos = this.flip ? 8 : 1
+		let blackIconPos = this.flip ? 1 : 8
+		text(this.whitePlayer, decile*10.85, decile*whiteTextPos)
+		text(this.blackPlayer, decile*10.85, decile*blackTextPos)
+		image(icons[this.whitePlayer], decile*12.5, decile*whiteIconPos, decile, decile)
+		image(icons[this.blackPlayer], decile*12.5, decile*blackIconPos, decile, decile)
+
+		// text(this.whitePlayer, decile*12, decile*whiteTextPos)
+		// text(this.blackPlayer, decile*12, decile*blackTextPos)
+		// image(icons[this.whitePlayer], decile*9.35, decile*whiteIconPos, decile, decile)
+		// image(icons[this.blackPlayer], decile*9.35, decile*blackIconPos, decile, decile)
 		pop()
+	}
+
+	drawPieceDeficit() {
+		// push()
+		// imageMode(CENTER)
+		// image(pieces["q"], 11.4*decile, 7.25*decile, decile*1.25, decile*1.25)
+		// pop()
+	}
+
+	drawUtility() {
+		"⟳"
+		"⮐"
+		"⇅"
+		"🗎"// settings?
 	}
 
 	drawNotation() {
@@ -470,10 +505,10 @@ class Chess { // Main Section of Code
 	}
 
 	promotionUI() {
-		let queen = !this.turn ? "Q" : "q"
-		let rook = !this.turn ? "R" : "r"
-		let knight = !this.turn ? "N" : "n"
-		let bishop = !this.turn ? "B" : "b"
+		let queen = this.turn ? "Q" : "q"
+		let rook = this.turn ? "R" : "r"
+		let knight = this.turn ? "N" : "n"
+		let bishop = this.turn ? "B" : "b"
 		push()
 		imageMode(CENTER)
 		fill(66, 135, 245, 200)
@@ -493,6 +528,8 @@ class Chess { // Main Section of Code
 		this.canCastle.push(move[1])
 		this.bitboards.push(move[2])
 		this.moveHistory.push(move[3])
+		this.whiteTimeHistory.push(this.whiteTime)
+		this.blackTimeHistory.push(this.blackTime)
 		this.move = this.boardHistory.length - 1
 		this.turn = !this.turn
 	}
@@ -672,6 +709,7 @@ class Chess { // Main Section of Code
 				if (y2 === (colour ? 1 : 8)) { // Promotion
 					if (!query) {
 						this.mode = "promo" // change piece promotion later or smth bozo <---------------- Important; temporary fix
+						this.turn = !this.turn
 						this.promoSquare = [x2, y2]
 						locator[piece] = locator[piece].filter(v => v[0] !== x2 || v[1] !== y2)
 					}
@@ -986,14 +1024,15 @@ function mousePressed() {
 			if (min(rank, file) >= 4 && max(rank, file) <= 5) {
 				let piece
 				if (rank === 4 && file === 4) {
-					piece = !game.turn ? "Q" : "q"
+					piece = game.turn ? "Q" : "q"
 				} else if (rank === 5 && file === 4) {
-					piece = !game.turn ? "R" : "r"
+					piece = game.turn ? "R" : "r"
 				} else if (rank === 4 && file === 5) {
-					piece = !game.turn ? "N" : "n"
+					piece = game.turn ? "N" : "n"
 				} else if (rank === 5 && file === 5) {
-					piece = !game.turn ? "B" : "b"
+					piece = game.turn ? "B" : "b"
 				} // Add promotion check here
+				game.turn = !game.turn
 				game.bitboards[game.bitboards.length-1][piece].push([game.promoSquare[0], game.promoSquare[1]])
 				game.board[game.promoSquare[1]-1][game.promoSquare[0]-1] = piece
 				game.boardHistory[game.boardHistory.length-1][game.promoSquare[1]-1][game.promoSquare[0]-1] = piece
@@ -1078,7 +1117,11 @@ function keyPressed() {
 				game.moveHistory.pop()
 				game.boardHistory.pop()
 				game.canCastle.pop()
+				game.whiteTimeHistory.pop()
+				game.blackTimeHistory.pop()
 				game.move = game.boardHistory.length
+				game.whiteTime = game.whiteTimeHistory[game.whiteTimeHistory.length-1]
+				game.blackTime = game.blackTimeHistory[game.blackTimeHistory.length-1]
 				game.board = game.copyBoard(game.boardHistory[game.boardHistory.length-1])
 			}
 
@@ -1129,3 +1172,4 @@ class AlephInfinity extends Lazaward {
 		
 	}
 }
+
