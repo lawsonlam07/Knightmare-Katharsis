@@ -17,8 +17,6 @@ let decile, game, time
 let mode = "menu"
 let menuPreset = ["Standard", descStandard, [51, 153, 255], [0, 77, 153], [0, 34, 102]]
 
-// Bugfixes completed: Promo time using opponents'; undo time
-
 let menuButtonStyle = `
 	transition: background-color 0.5s, width 0.5s, opacity 0.5s, left 0.5s;
 	font-family: kodeMono, Courier New, Arial, serif;
@@ -74,7 +72,7 @@ function preload() {
 }
 
 function setup() {
-	//songs["checkmate"].loop()
+	// songs["checkmate"].loop()
 	createCanvas(windowWidth, windowHeight)
 	textFont(kodeMono)
 	game = new Chess(newFEN)
@@ -212,6 +210,7 @@ class Chess { // Main Section of Code
 		this.board = this.initiateBoard(fen)
 		this.promoSquare = [false, false]
 		this.canCastle = [[true, true, true, true]]
+		this.passantHistory = [[false, false]]
 		this.highlightSquares = []
 		this.arrowSquares = []
 		this.moveHistory = []
@@ -376,10 +375,25 @@ class Chess { // Main Section of Code
 	}
 
 	drawUtility() {
-		"⟳"
-		"⮐"
-		"⇅"
-		"🗎"// settings?
+		push()
+		let alpha = mode === "game" ? 255 : 255 - (255 * factor(backTime, 500, "sine"))
+		textSize(windowHeight/10)
+		fill(200, alpha)
+		rectMode(CORNER)
+		rect(windowWidth*0.65, windowHeight*0.05, decile, decile, decile/4)
+		rect(windowWidth*0.7, windowHeight*0.05, decile, decile, decile/4)
+		rect(windowWidth*0.75, windowHeight*0.05, decile, decile, decile/4)
+		rect(windowWidth*0.8, windowHeight*0.05, decile, decile, decile/4)
+
+
+		textFont("Arial")
+		fill(50, alpha)
+		textAlign(CENTER)
+		text("⟳", windowWidth*0.65+decile/2, windowHeight*0.135)
+		text("⮐", windowWidth*0.7+decile/2, windowHeight*0.15)
+		text("⇅", windowWidth*0.75+decile/2, windowHeight*0.135)
+		text("🗎", windowWidth*0.8+decile/2, windowHeight*0.135)
+		pop()
 	}
 
 	drawNotation() {
@@ -536,6 +550,7 @@ class Chess { // Main Section of Code
 		this.canCastle.push(move[1])
 		this.bitboards.push(move[2])
 		this.moveHistory.push(move[3])
+		this.passantHistory.push(move[4])
 		this.whiteTimeHistory.push(this.whiteTime)
 		this.blackTimeHistory.push(this.blackTime)
 		this.move = this.boardHistory.length - 1
@@ -617,23 +632,21 @@ class Chess { // Main Section of Code
 				let double = colour ? 7 : 2
 				let dir = colour ? -1 : 1
 				if (this.inBounds(x1, y1 + dir) && this.board[y1+dir-1][x1-1] === "#") { // Normal Forwards Moves
-					pseudoLegalMoves.push([x1, y1 + dir, false])
+					pseudoLegalMoves.push([x1, y1 + dir])
 					if (y1 === double && this.board[y1+(2*dir)-1][x1-1] === "#") { // Double Move
-						pseudoLegalMoves.push([x1, y1 + (2 * dir), false])
+						pseudoLegalMoves.push([x1, y1 + (2 * dir)])
 					}
 				}
 
 				for (let i = -1; i <= 1; i += 2) { // Capture Moves
 					let target = this.board[y1+dir-1][x1+i-1]
-					let enPassant = this.getNotation(x1+i, 9-(double)) + this.getNotation(x1+i, 9-(double+2*dir))
-					if (this.inBounds(x1+i, y1+dir) && this.getColour(target) !== colour && target !== "#") {
-						pseudoLegalMoves.push([x1 + i, y1 + dir, false])
-					} else if (this.moveHistory[this.moveHistory.length-1] === enPassant && y1 === double+(3*dir)) {
-						pseudoLegalMoves.push([x1 + i, y1 + dir, true])
+					let passantSquare = this.passantHistory[this.passantHistory.length-1]
+					if (this.inBounds(x1+i, y1+dir) && ((this.getColour(target) !== colour && target !== "#") || (x1+i === passantSquare[0] && y1+dir === passantSquare[1]))) {
+						pseudoLegalMoves.push([x1 + i, y1 + dir])
 					}
 				}
 				break
-	
+
 			case "N":
 				for (let [x, y] of [[-2, -1], [-2, 1], [-1, -2], [-1, 2], [1, -2], [1, 2], [2, -1], [2, 1]]) {
 					if (this.inBounds(x1+x, y1+y)) {
@@ -646,7 +659,7 @@ class Chess { // Main Section of Code
 					}
 				}
 				break
-	
+
 			case "B":
 				pseudoLegalMoves = this.getDiagonalMoves(x1, y1)
 				break
@@ -658,7 +671,7 @@ class Chess { // Main Section of Code
 			case "Q":
 				pseudoLegalMoves = this.getDiagonalMoves(x1, y1).concat(this.getHorizontalMoves(x1, y1))
 				break
-	
+
 			case "K":
 				for (let i = -1; i <= 1; i++) {
 					for (let j = -1; j <= 1; j++) {
@@ -696,14 +709,49 @@ class Chess { // Main Section of Code
 		} return legalMoves
 	}
 
-	handleMove(x1, y1, x2, y2, piece, locator, activeBoard, castleArr, query=false) {
+	handleMove(x1, y1, x2, y2, piece, locator, activeBoard, castleArr, query=false, findNotation=false) {
 		let moves = query ? [[x2, y2]] : this.getLegalMoves(x1, y1)
 		let colour = this.getColour(piece)
 		let notation = piece.toUpperCase() === "P" ? "" : piece.toUpperCase()
+		let passantSquare = [false, false]
 	
 		if (moves.some(v => v[0] === x2 && v[1] === y2) && this.mode === "board") { // Valid Moves
 			if (!query) {sfx["move"].play()}
-			notation += this.getNotation(x1, y1)
+
+			if (findNotation) {
+				let pieceLocator = locator[piece].filter(v => v[0] !== x1 || v[1] !== y1)
+				let endSquare = this.getNotation(x1, y1)
+				let prevPassant = this.passantHistory[this.passantHistory.length-1]
+				let disambiguateX = []
+				let disambiguateY = []
+				let repeat = false
+
+				if (piece.toUpperCase() === "P" && abs(y1-y2) === 2) { // En passant checker.
+					passantSquare = [x1, (y1+y2)/2]
+				}
+
+				for (let [x, y] of pieceLocator) {
+					let perms = this.getLegalMoves(x, y)
+					if (perms.some(v => v[0] === x2 && v[1] === y2)) { // If the move is possible with another piece.
+						repeat = true
+						disambiguateX.push(x)
+						disambiguateY.push(y)
+					}
+				}
+
+				if (repeat) {
+					if (disambiguateX.every(v => v !== x1)) {
+						notation += endSquare.slice(0, 1)
+					} else if (disambiguateY.every(v => v !== y1)) {
+						notation += endSquare.slice(1, 2)
+					} else {
+						notation += endSquare
+					}
+				} else if ((activeBoard[y2-1][x2-1] !== "#" || (x2 === prevPassant[0] && y2 === prevPassant[1])) && piece.toUpperCase() === "P") {
+					notation += endSquare.slice(0, 1)
+				}
+			}
+
 			if (activeBoard[y2-1][x2-1] !== "#") {notation += "x"}
 	
 			let capturedPiece = activeBoard[y2-1][x2-1]
@@ -716,7 +764,7 @@ class Chess { // Main Section of Code
 			if (piece.toUpperCase() === "P") { // Pawn Special Cases
 				if (y2 === (colour ? 1 : 8)) { // Promotion
 					if (!query) {
-						this.mode = "promo" // change piece promotion later or smth bozo <---------------- Important; temporary fix
+						this.mode = "promo"
 						this.turn = !this.turn
 						this.promoSquare = [x2, y2]
 						locator[piece] = locator[piece].filter(v => v[0] !== x2 || v[1] !== y2)
@@ -763,7 +811,7 @@ class Chess { // Main Section of Code
 			}
 			if (this.isCheck(...locator[this.turn ? "k" : "K"][0], !this.turn, locator, this.board)) {
 				notation += "+"; if (!query) {sfx["check"].play()}
-			} return [activeBoard, castleArr, locator, notation]
+			} return [activeBoard, castleArr, locator, notation, passantSquare]
 		} return false
 	}
 
@@ -808,6 +856,36 @@ class Chess { // Main Section of Code
 				return true // Check by Pawn
 			}
 		} return false
+	}
+
+	undoMove() {
+		if (this.moveHistory.length !== 0) {
+			this.turn = !this.turn
+			this.bitboards.pop()
+			this.moveHistory.pop()
+			this.boardHistory.pop()
+			this.canCastle.pop()
+			this.passantHistory.pop()
+			this.whiteTimeHistory.pop()
+			this.blackTimeHistory.pop()
+			this.move = this.boardHistory.length-1
+			this.whiteTime = this.whiteTimeHistory[this.whiteTimeHistory.length-1]
+			this.blackTime = this.blackTimeHistory[this.blackTimeHistory.length-1]
+			this.board = this.copyBoard(this.boardHistory[this.boardHistory.length-1])
+		}
+	}
+
+	printMoves() {
+		let moves = document.createElement("textarea")
+		let moveList = []
+		for (let i = 0; i < this.moveHistory.length; i += 2) {
+			moveList.push(`${Math.floor(i/2)+1}. ${this.moveHistory.slice(i, i + 2).join(" ")}`)
+		}
+		document.body.appendChild(moves)
+		moves.value = moveList.join("     ")
+		moves.select()
+		document.execCommand("copy")
+		moves.remove()
 	}
 }
 
@@ -1103,6 +1181,7 @@ function mouseClickedElement() {
 			currentTransition = ["fadeIn", "sine"]
 
 			if (clickedButton === "Standard") {
+				// menuPreset = ["Standard", descStandard, [203, 205, 209], [132, 133, 135], [71, 72, 74]]
 				menuPreset = ["Standard", descStandard, [51, 153, 255], [0, 77, 153], [0, 34, 102]]
 			} else if (clickedButton === "Chess960") {
 				menuPreset = ["Chess960", desc960, [212, 111, 17], [133, 71, 15], [71, 41, 14]]
@@ -1244,8 +1323,24 @@ function getRankandFileFromMouse(x, y) {
 
 function mousePressed() {
 	[rank, file] = getRankandFileFromMouse(mouseX, mouseY)
+	if (!rank || !file) {mouseBuffer = [false, false, false]}
 	if (mode === "game") {
 		if (mouseButton === LEFT) {
+			if (windowHeight*0.05 <= mouseY && mouseY <= windowHeight*0.15) { // Utility buttons
+				if (windowWidth*0.65 <= mouseX && mouseX <= windowWidth*0.65+decile) {
+					// Restart
+					game = new Chess(startFEN)
+				} else if (windowWidth*0.7 <= mouseX && mouseX <= windowWidth*0.7+decile) {
+					// Undo
+					game.undoMove()
+				} else if (windowWidth*0.75 <= mouseX && mouseX <= windowWidth*0.75+decile) {
+					// Flip
+					game.flip = !game.flip
+				} else if (windowWidth*0.8 <= mouseX && mouseX <= windowWidth*0.8+decile) {
+					game.printMoves()
+					// Print
+				}
+			}
 			game.highlightSquares = []; game.arrowSquares = []
 			if (game.mode === "promo") { // Promotion
 				if (min(rank, file) >= 4 && max(rank, file) <= 5) {
@@ -1275,7 +1370,7 @@ function mousePressed() {
 			if (mouseBuffer[2] === true && mouseButton === LEFT) {
 				if ((mouseBuffer[0] !== rank || mouseBuffer[1] !== file) && mouseButton === LEFT) {
 					let piece = game.board[mouseBuffer[1] - 1][mouseBuffer[0] - 1]
-					let move = game.handleMove(mouseBuffer[0], mouseBuffer[1], rank, file, piece, game.copyBitboard(game.bitboards[game.bitboards.length-1]), game.copyBoard(game.board), [...game.canCastle[game.canCastle.length-1]])
+					let move = game.handleMove(mouseBuffer[0], mouseBuffer[1], rank, file, piece, game.copyBitboard(game.bitboards[game.bitboards.length-1]), game.copyBoard(game.board), [...game.canCastle[game.canCastle.length-1]], false, true)
 					if (move) {game.updateAttributes(move)}
 				} mouseBuffer = [false, false, false]
 				
@@ -1326,9 +1421,9 @@ function mousePressed() {
 			if (menuPreset[0] === "Standard") {
 				currentTransition = ["lift", "cosine"]
 			} else if (menuPreset[0] === "Chess960") {
-				currentTransition = ["pull", "sine"]
-			} else { // do the tidal wave thing
 				currentTransition = ["part", "sine"]
+			} else { // do the tidal wave thing
+				currentTransition = ["pull", "sine"]
 			}			
 			setTimeout(() => {
 				menuDebounce = true
@@ -1356,7 +1451,7 @@ function mouseReleased() {
 	} else if (mouseBuffer[2] === LEFT && (mouseBuffer[0] !== rank || mouseBuffer[1] !== file)) { // Handle Move
 		let piece = game.board[mouseBuffer[1] - 1][mouseBuffer[0] - 1]
 		if (game.getColour(piece) === game.turn && piece !== "#") {
-			let move = game.handleMove(mouseBuffer[0], mouseBuffer[1], rank, file, piece, game.copyBitboard(game.bitboards[game.bitboards.length-1]), game.copyBoard(game.board), [...game.canCastle[game.canCastle.length-1]])
+			let move = game.handleMove(mouseBuffer[0], mouseBuffer[1], rank, file, piece, game.copyBitboard(game.bitboards[game.bitboards.length-1]), game.copyBoard(game.board), [...game.canCastle[game.canCastle.length-1]], false, true)
 			if (move) {game.updateAttributes(move)}
 		}
 	} else if (mouseBuffer[2] === LEFT && (mouseBuffer[0] === rank && mouseBuffer[1] === file)) { // Possible Move
@@ -1378,19 +1473,12 @@ function keyPressed() {
 			break
 
 		case "u":
-			if (game.moveHistory.length !== 0) {
-				game.turn = !game.turn
-				game.bitboards.pop()
-				game.moveHistory.pop()
-				game.boardHistory.pop()
-				game.canCastle.pop()
-				game.whiteTimeHistory.pop()
-				game.blackTimeHistory.pop()
-				game.move = game.boardHistory.length
-				game.whiteTime = game.whiteTimeHistory[game.whiteTimeHistory.length-1]
-				game.blackTime = game.blackTimeHistory[game.blackTimeHistory.length-1]
-				game.board = game.copyBoard(game.boardHistory[game.boardHistory.length-1])
-			}
+			game.undoMove()	
+			break
+
+		case "p":
+			game.printMoves()
+			break
 
 		case "ArrowLeft":
 			game.move = max(game.move-1, 0)
