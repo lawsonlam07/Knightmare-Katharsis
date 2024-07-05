@@ -15,6 +15,8 @@ let mouseBuffer = [false, false, false]
 let menuDebounce = true, backDebounce = true
 let decile, game, time
 let mode = "menu"
+let players = ["Human", "Fortuna", "Equinox", "Astor", "Lazaward", "Aleph"]
+let wPlayer = 1, bPlayer = 1
 let menuPreset = ["Standard", descStandard, [51, 153, 255], [0, 77, 153], [0, 34, 102]]
 
 let menuButtonStyle = `
@@ -164,6 +166,19 @@ function setup() {
 			"bottom": "Solo"
 		}
 	}
+	timeInputs = {
+		"wMins": createInput("10"),
+		"wSecs": createInput("00"),
+		"wIncr": createInput("0"),
+		"bMins": createInput("10"),
+		"bSecs": createInput("00"),
+		"bIncr": createInput("0")
+	}
+
+	for (let box in timeInputs) {
+		timeInputs[box].style(`font-family: kodeMono, Courier New, Arial, serif; background-color: rgba(0, 0, 0, 0); font-size: 5vh;
+		border: none; border-radius: 5px; text-align: center; color: #${box.slice(0, 1) === "w" ? "FFFFFF" : "000000"}`)
+	}
 
 	for (let div in buttons.divs) {
 		let text = buttons.divs[div].html()
@@ -187,9 +202,17 @@ function draw() {
 	buttons.divs["top"].position(0, windowHeight * 0.2)
 	buttons.divs["middle"].position(0, windowHeight * 0.45)
 	buttons.divs["bottom"].position(0, windowHeight * 0.7)
+
 	game.draw()
 
 	if (mode === "start" || time <= backStartTime + 500) {drawMenu(...menuPreset)}
+
+	if (mode !== "start") {
+		for (let box in timeInputs) {
+			timeInputs[box].position(-windowWidth, -windowHeight)
+			timeInputs[box].size(decile*0.75, decile*0.75)
+		}
+	}
 
 	for (let div in buttons.divs) {
 		buttons.divs[div].mouseOver(mouseHover)
@@ -204,7 +227,7 @@ function draw() {
 }
 
 class Chess { // Main Section of Code
-	constructor(fen) {
+	constructor(fen, wPlayer="Human", bPlayer="Human", wTime=600000, bTime=600000, wIncr=0, bIncr=0) {
 		this.boardHistory = [this.initiateBoard(fen)]
 		this.bitboards = [this.getBitboards(fen)]
 		this.board = this.initiateBoard(fen)
@@ -214,13 +237,15 @@ class Chess { // Main Section of Code
 		this.highlightSquares = []
 		this.arrowSquares = []
 		this.moveHistory = []
-		this.whiteTimeHistory = [600000]
-		this.blackTimeHistory = [600000]
-		this.whiteTime = 600000
-		this.blackTime = 600000
+		this.whiteTimeHistory = []
+		this.blackTimeHistory = []
+		this.whiteTime = wTime
+		this.blackTime = bTime
+		this.whiteIncrement = wIncr
+		this.blackIncrement = bIncr
 		this.moveTime = new Date().getTime()
-		this.whitePlayer = "Human"
-		this.blackPlayer = "Human"
+		this.whitePlayer = wPlayer
+		this.blackPlayer = bPlayer
 		this.mode = "board"
 		this.turn = true
 		this.flip = true
@@ -259,6 +284,8 @@ class Chess { // Main Section of Code
 	}
 
 	convertTime(time) {return `${Math.floor(time/60)}:${(abs(time%60)).toLocaleString('en-US', {minimumIntegerDigits: 2})}`}
+
+	timeToMs(mins, secs) {return mins*60000 + secs*1000}
 
 	getNotation(x, y) {return `${String.fromCharCode(96+x)}${9-y}`}
 
@@ -357,8 +384,8 @@ class Chess { // Main Section of Code
 		let blackIconPos = this.flip ? 1 : 8
 		text(this.whitePlayer, decile*10.85, decile*whiteTextPos)
 		text(this.blackPlayer, decile*10.85, decile*blackTextPos)
-		image(icons[this.whitePlayer], decile*12.5, decile*whiteIconPos, decile, decile)
-		image(icons[this.blackPlayer], decile*12.5, decile*blackIconPos, decile, decile)
+		// image(icons[this.whitePlayer], decile*12.5, decile*whiteIconPos, decile, decile)
+		// image(icons[this.blackPlayer], decile*12.5, decile*blackIconPos, decile, decile)
 
 		// text(this.whitePlayer, decile*12, decile*whiteTextPos)
 		// text(this.blackPlayer, decile*12, decile*blackTextPos)
@@ -545,6 +572,7 @@ class Chess { // Main Section of Code
 	////////// Back End - Move Validation //////////
 
 	updateAttributes(move) {
+		if (this.turn) {this.whiteTime += this.whiteIncrement} else {this.blackTime += this.blackIncrement}
 		this.board = move[0]
 		this.boardHistory.push(move[0])
 		this.canCastle.push(move[1])
@@ -558,7 +586,7 @@ class Chess { // Main Section of Code
 	}
 
 	showLegalMoves() {
-		if ((mouseBuffer[2] === true || (mouseIsPressed === true && mouseButton === LEFT) && mouseBuffer[0]) && this.mode === "board") {
+		if ((mouseBuffer[2] || (mouseIsPressed && mouseButton === LEFT) && mouseBuffer[0]) && this.mode === "board" && (this.turn ? this.whitePlayer : this.blackPlayer) === "Human") {
 			let target = this.board[mouseBuffer[1]-1][mouseBuffer[0]-1]
 			if ([LEFT, true].includes(mouseBuffer[2]) && (this.getColour(target)) === this.turn) {
 				push()
@@ -858,6 +886,8 @@ class Chess { // Main Section of Code
 		} return false
 	}
 
+	resetBoard() {game = new Chess(startFEN, players[wPlayer-1], players[bPlayer-1], this.timeToMs(timeInputs["wMins"].value(), timeInputs["wSecs"].value()), this.timeToMs(timeInputs["bMins"].value(), timeInputs["bSecs"].value()), timeInputs["wIncr"].value()*1000, timeInputs["bIncr"].value()*1000)}
+
 	undoMove() {
 		if (this.moveHistory.length !== 0) {
 			this.turn = !this.turn
@@ -892,6 +922,19 @@ class Chess { // Main Section of Code
 function drawMenu(title, desc, colour1, colour2, colour3) {
 	let offset = decile/10
 	let alpha = (mode === "start") ? 255 : 255 - (255 * factor(backStartTime, 500, "sine"))
+
+	timeInputs["wMins"].position(windowWidth*0.1775 - decile*1.45, decile*5.975)
+	timeInputs["wSecs"].position(windowWidth*0.1775 - decile*0.45, decile*5.975)
+	timeInputs["wIncr"].position(windowWidth*0.1775 + decile*0.6, decile*5.975)
+
+	timeInputs["bMins"].position(windowWidth*0.5225 - decile*1.45, decile*5.975)
+	timeInputs["bSecs"].position(windowWidth*0.5225 - decile*0.45, decile*5.975)
+	timeInputs["bIncr"].position(windowWidth*0.5225 + decile*0.6, decile*5.975)
+
+	for (let box in timeInputs) {
+		timeInputs[box].size(decile*0.75, decile*0.75)
+		timeInputs[box].style(`opacity: ${alpha/255}`)
+	}
 
 	push() // Background
 	stroke(0, 0)
@@ -1017,24 +1060,25 @@ function drawMenu(title, desc, colour1, colour2, colour3) {
 	textSize(decile*0.6)
 	text(">", windowWidth*0.28, decile*4.9)
 	pop()
-	text("(1/6)", windowWidth*0.305, decile*4)
+	text(`(${wPlayer}/6)`, windowWidth*0.305, decile*4)
 	text("?", windowWidth*0.305, decile*5.7)
 	fill(0, alpha)
 	push()
 	textSize(decile*0.6)
 	text(">", windowWidth*0.625, decile*4.9)
 	pop()
-	text("(1/6)", windowWidth*0.65, decile*4)
-	text("?", windowWidth*0.65, decile*5.7) // Experiment with inverting colours in white-black outline?
+	text(`(${bPlayer}/6)`, windowWidth*0.65, decile*4)
+	text("?", windowWidth*0.65, decile*5.7)
 
 	textAlign(CENTER)
 	textSize(decile*0.6)
 	fill(255, alpha)
-	text("Human", windowWidth*0.1775, decile*4.9)
-	text("10:00+0", windowWidth*0.1775, decile*6.6)
+	text(players[wPlayer-1], windowWidth*0.1775, decile*4.9)
+	text(":  +", windowWidth*0.1775, decile*6.525)
+
 	fill(0, alpha)
-	text("Human", windowWidth*0.5225, decile*4.9)
-	text("10:00+0", windowWidth*0.5225, decile*6.6)
+	text(players[bPlayer-1], windowWidth*0.5225, decile*4.9)
+	text(":  +", windowWidth*0.5225, decile*6.525)
 
 	fill(255, alpha)
 	strokeWeight(2)
@@ -1053,7 +1097,7 @@ function drawMenu(title, desc, colour1, colour2, colour3) {
 		rect(mouseX+windowWidth*0.155-decile*0.25, mouseY-decile*2.25, windowWidth*0.31, decile*5, decile/2)
 		fill(255, alpha)
 		stroke(0, alpha)
-		strokeWeight(1) // No, there isnt an easier way to colour everything... I looked...
+		strokeWeight(1) // No, there isnt an easier way to colour everything... I looked... :C
 		text("Time is given in the format:\n\n\n\n\n\n\n\nNote that increment is given   \nin seconds and it refers to    \nthe time added after each move.", mouseX+windowWidth*0.155-decile*0.25, mouseY-decile*2.25)
 		text("\n\n  :  + \n\n\n\n\n\n\n\n", mouseX+windowWidth*0.155-decile*0.25, mouseY-decile*2.25)
 		fill(235, 192, 52)
@@ -1072,7 +1116,6 @@ function drawMenu(title, desc, colour1, colour2, colour3) {
 		text("\n\n\n\n  =        \n\n\n\n\n\n", mouseX+windowWidth*0.155-decile*0.25, mouseY-decile*2.25)
 		text("\n\n\n\n\n  =        \n\n\n\n\n", mouseX+windowWidth*0.155-decile*0.25, mouseY-decile*2.25)
 		text("\n\n\n\n\n\n  =          \n\n\n\n", mouseX+windowWidth*0.155-decile*0.25, mouseY-decile*2.25)
-		// text("Time is given in the format:\n\nmm:ss+i\n\nm = minutes\ns = seconds\ni = increment\n\nNote that increment is given   \nin seconds and it refers to    \nthe time added after each move.", mouseX+windowWidth*0.155-decile*0.25, mouseY-decile*2.25)
 	}
 	pop()
 }
@@ -1196,9 +1239,11 @@ function mouseClickedElement() {
 				buttons.divs[v].style(`opacity: 0; background-color: ${buttons.uColour[newText]}; width: 0vw`)
 			}
 			
-			setTimeout(() => { // Fade out | part, sine
+			setTimeout(() => { // Fade out | part, sine //////////////////////// START MENU
 				mode = "start"
-				//game = new Chess(startFEN)
+				timeInputs["wMins"].value("10"); timeInputs["wSecs"].value("00"); timeInputs["wIncr"].value("0")
+				timeInputs["bMins"].value("10"); timeInputs["bSecs"].value("00"); timeInputs["bIncr"].value("0")
+				wPlayer = 1; bPlayer = 1
 				clickedTime = time
 				currentTransition = ["fadeOut", "cosine"]
 				
@@ -1329,7 +1374,7 @@ function mousePressed() {
 			if (windowHeight*0.05 <= mouseY && mouseY <= windowHeight*0.15) { // Utility buttons
 				if (windowWidth*0.65 <= mouseX && mouseX <= windowWidth*0.65+decile) {
 					// Restart
-					game = new Chess(startFEN)
+					game.resetBoard()
 				} else if (windowWidth*0.7 <= mouseX && mouseX <= windowWidth*0.7+decile) {
 					// Undo
 					game.undoMove()
@@ -1368,7 +1413,7 @@ function mousePressed() {
 
 		if (rank && file) {
 			if (mouseBuffer[2] === true && mouseButton === LEFT) {
-				if ((mouseBuffer[0] !== rank || mouseBuffer[1] !== file) && mouseButton === LEFT) {
+				if ((mouseBuffer[0] !== rank || mouseBuffer[1] !== file) && mouseButton === LEFT && (game.turn ? game.whitePlayer : game.blackPlayer) === "Human") {
 					let piece = game.board[mouseBuffer[1] - 1][mouseBuffer[0] - 1]
 					let move = game.handleMove(mouseBuffer[0], mouseBuffer[1], rank, file, piece, game.copyBitboard(game.bitboards[game.bitboards.length-1]), game.copyBoard(game.board), [...game.canCastle[game.canCastle.length-1]], false, true)
 					if (move) {game.updateAttributes(move)}
@@ -1393,44 +1438,56 @@ function mousePressed() {
 			}
 		} if (rank && file) {game.move = game.boardHistory.length - 1}
 	
-	} else if (mode === "start" && menuDebounce && windowWidth*0.4225 <= mouseX && mouseX <= windowWidth*0.6225 && decile*7.75 <= mouseY && mouseY <= decile*9.55) {
-		menuDebounce = false
-		sfx["click3"].play()
-		clickedTime = time
-		transitionDuration = 1500
-
-		if (menuPreset[0] === "Standard") {
-			currentTransition = ["ribbon", "linear"]
-		} else if (menuPreset[0] === "Chess960") {
-			currentTransition = ["shutter", "bounce"]
-		} else { // do the tidal wave thing
-			currentTransition = ["drop", "sine"]
-		}
-
-		backButton.style("opacity: 0; background-color: #4A4A4A; width: 0vw; left: 100vw")
-		for (let v of ["top", "middle", "bottom"]) {
-			let newText = buttons.divs[v].html()
-			buttons.divs[v].html(newText)
-			buttons.divs[v].style(`opacity: 0; background-color: ${buttons.uColour[newText]}; width: 0vw`)
-		}
-		
-		setTimeout(() => {
-			mode = "game"
-			game = new Chess(startFEN)
+	} else if (mode === "start") {
+		if (menuDebounce && windowWidth*0.4225 <= mouseX && mouseX <= windowWidth*0.6225 && decile*7.75 <= mouseY && mouseY <= decile*9.55) {
+			menuDebounce = false
+			sfx["click3"].play()
 			clickedTime = time
+			transitionDuration = 1500
+	
 			if (menuPreset[0] === "Standard") {
-				currentTransition = ["lift", "cosine"]
+				currentTransition = ["ribbon", "linear"]
 			} else if (menuPreset[0] === "Chess960") {
-				currentTransition = ["part", "sine"]
+				currentTransition = ["shutter", "bounce"]
 			} else { // do the tidal wave thing
-				currentTransition = ["pull", "sine"]
-			}			
+				currentTransition = ["drop", "sine"]
+			}
+	
+			backButton.style("opacity: 0; background-color: #4A4A4A; width: 0vw; left: 100vw")
+			for (let v of ["top", "middle", "bottom"]) {
+				let newText = buttons.divs[v].html()
+				buttons.divs[v].html(newText)
+				buttons.divs[v].style(`opacity: 0; background-color: ${buttons.uColour[newText]}; width: 0vw`)
+			}
+			
 			setTimeout(() => {
-				menuDebounce = true
-				currentTransition = [null, null]
-				backButton.style("width: 14vw; left: 85vw; opacity: 0.9; background-color: #4A4A4A")
-			}, 1500)
-		}, 1750)
+				mode = "game"
+				game = new Chess(startFEN, players[wPlayer-1], players[bPlayer-1], game.timeToMs(timeInputs["wMins"].value(), timeInputs["wSecs"].value()), game.timeToMs(timeInputs["bMins"].value(), timeInputs["bSecs"].value()), timeInputs["wIncr"].value()*1000, timeInputs["bIncr"].value()*1000)
+				clickedTime = time
+				if (menuPreset[0] === "Standard") {
+					currentTransition = ["lift", "cosine"]
+				} else if (menuPreset[0] === "Chess960") {
+					currentTransition = ["part", "sine"]
+				} else { // do the tidal wave thing
+					currentTransition = ["pull", "sine"]
+				}			
+				setTimeout(() => {
+					menuDebounce = true
+					currentTransition = [null, null]
+					backButton.style("width: 14vw; left: 85vw; opacity: 0.9; background-color: #4A4A4A")
+				}, 1500)
+			}, 1750)
+		} else if (decile*4.25 <= mouseY && mouseY <= decile*5.1) { // Switch player.
+			if (windowWidth*0.065 <= mouseX && mouseX <= windowWidth*0.105) {
+				wPlayer = wPlayer === 1 ? 6 : wPlayer-1
+			} else if (windowWidth*0.25 <= mouseX && mouseX <= windowWidth*0.29) {
+				wPlayer = wPlayer === 6 ? 1 : wPlayer+1
+			} else if (windowWidth*0.405 <= mouseX && mouseX <= windowWidth*0.445) {
+				bPlayer = bPlayer === 1 ? 6 : bPlayer-1
+			} else if (windowWidth*0.595 <= mouseX && mouseX <= windowWidth*0.635) {
+				bPlayer = bPlayer === 6 ? 1 : bPlayer+1
+			}
+		}
 	}
 }
 
@@ -1450,7 +1507,7 @@ function mouseReleased() {
 		}
 	} else if (mouseBuffer[2] === LEFT && (mouseBuffer[0] !== rank || mouseBuffer[1] !== file)) { // Handle Move
 		let piece = game.board[mouseBuffer[1] - 1][mouseBuffer[0] - 1]
-		if (game.getColour(piece) === game.turn && piece !== "#") {
+		if (game.getColour(piece) === game.turn && piece !== "#" && (game.turn ? game.whitePlayer : game.blackPlayer) === "Human") {
 			let move = game.handleMove(mouseBuffer[0], mouseBuffer[1], rank, file, piece, game.copyBitboard(game.bitboards[game.bitboards.length-1]), game.copyBoard(game.board), [...game.canCastle[game.canCastle.length-1]], false, true)
 			if (move) {game.updateAttributes(move)}
 		}
@@ -1469,7 +1526,7 @@ function keyPressed() {
 			break
 
 		case "r":
-			game = new Chess(startFEN)
+			game.resetBoard()
 			break
 
 		case "u":
@@ -1527,3 +1584,4 @@ class AlephInfinity extends Lazaward {
 		
 	}
 }
+
