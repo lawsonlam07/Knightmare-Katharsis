@@ -174,10 +174,18 @@ function setup() {
 		"bSecs": createInput("00"),
 		"bIncr": createInput("0")
 	}
+	transitionDivs = {
+		"div1": createDiv(),
+		"div2": createDiv()
+	}
+	div1 = createDiv("Hi")
 
 	for (let box in timeInputs) {
-		timeInputs[box].style(`font-family: kodeMono, Courier New, Arial, serif; background-color: rgba(0, 0, 0, 0); font-size: 5vh;
-		border: none; border-radius: 5px; text-align: center; color: #${box.slice(0, 1) === "w" ? "FFFFFF" : "000000"}`)
+		// timeInputs[box].attribute("type", "number")
+		timeInputs[box].attribute("maxlength", "2")
+		timeInputs[box].style(`font-family: kodeMono, Courier New, Arial, serif; background-color: rgba(0, 0, 0, 0); 
+		font-size: 5vh; border: none; border-radius: 5px; text-align: center; overflow: auto;
+		color: ${box.slice(0, 1) === "w" ? "white" : "black"}`)
 	}
 
 	for (let div in buttons.divs) {
@@ -205,14 +213,16 @@ function draw() {
 
 	game.draw()
 
-	if (mode === "start" || time <= backStartTime + 500) {drawMenu(...menuPreset)}
-
-	if (mode !== "start") {
+	if (mode === "start" || time <= backStartTime + 500) {drawMenu(...menuPreset)} else {
 		for (let box in timeInputs) {
 			timeInputs[box].position(-windowWidth, -windowHeight)
 			timeInputs[box].size(decile*0.75, decile*0.75)
 		}
 	}
+
+	// transitionDivs["div2"].position(0, windowHeight-50)
+	// transitionDivs["div2"].size(100, 100)
+	// transitionDivs["div2"].style(`background-color: black; transform-origin: 0px ${50}px; transform: rotate(-45deg)`)
 
 	for (let div in buttons.divs) {
 		buttons.divs[div].mouseOver(mouseHover)
@@ -224,6 +234,695 @@ function draw() {
 	backButton.mousePressed(mouseClickedElement)
 
 	transition(clickedTime, transitionDuration, ...currentTransition)
+}
+
+function drawMenu(title, desc, colour1, colour2, colour3) {
+	let offset = decile/10
+	let alpha = (mode === "start") ? 255 : 255 - (255 * factor(backStartTime, 500, "sine"))
+
+	timeInputs["wMins"].position(windowWidth*0.1775 - decile*1.45, decile*5.975)
+	timeInputs["wSecs"].position(windowWidth*0.1775 - decile*0.45, decile*5.975)
+	timeInputs["wIncr"].position(windowWidth*0.1775 + decile*0.6, decile*5.975)
+
+	timeInputs["bMins"].position(windowWidth*0.5225 - decile*1.45, decile*5.975)
+	timeInputs["bSecs"].position(windowWidth*0.5225 - decile*0.45, decile*5.975)
+	timeInputs["bIncr"].position(windowWidth*0.5225 + decile*0.6, decile*5.975)
+
+	for (let box in timeInputs) {
+		timeInputs[box].size(decile*0.75, decile*0.75)
+		timeInputs[box].style(`opacity: ${alpha/255}`)
+	}
+
+	push() // Background
+	stroke(0, 0)
+	fill(...colour1, alpha)
+	textAlign(CENTER)
+	rect(0, 0, windowWidth*0.6, windowHeight*0.2)
+	triangle(windowWidth*0.6, 0, windowWidth*0.6, windowHeight*0.2, windowWidth*0.7, windowHeight*0.2)
+	rectMode(CENTER)
+	rect(windowWidth/2, windowHeight*0.6, windowWidth, windowHeight*0.8)
+	stroke(...colour1, alpha)
+	line(0, windowHeight*0.2, windowWidth, windowHeight*0.2)
+	strokeWeight(10)
+
+	fill(...colour2, alpha)
+	stroke(255, alpha)
+	rect(windowWidth*0.1775, decile*4.75, windowWidth*0.315, decile*5, decile/2) // White and black outlines
+	stroke(0, alpha)
+	rect(windowWidth*0.5225, decile*4.75, windowWidth*0.315, decile*5, decile/2)
+
+	rectMode(CENTER)
+	stroke(0, 0) // Tertiary colour shading
+	fill(...colour3, alpha)
+	rect(windowWidth*0.35-offset, decile+offset, windowWidth*0.48125, decile*1.5)
+	rect(windowWidth*0.075-offset, decile+offset, windowWidth*0.025, decile*1.5)
+	rect(windowWidth*0.04-offset, decile+offset, windowWidth*0.0125, decile*1.5)
+	rect(windowWidth*0.02-offset, decile+offset, windowWidth*0.00625, decile*1.5)
+	triangle(windowWidth*0.59-offset, decile*0.25+offset, windowWidth*0.59-offset, decile*1.75+offset, windowWidth*0.6625-offset, decile*1.75+offset)
+	
+	rect(windowWidth*0.5225-offset, decile*8.65+offset, windowWidth*0.2, decile*1.8) // Start button
+	triangle(windowWidth*0.6224-offset, decile*9.55+offset, windowWidth*0.6224-offset, decile*7.75+offset, windowWidth*0.67-offset, decile*7.75+offset)
+	rect(windowWidth*0.21-offset, decile*8.65+offset, windowWidth*0.38, decile*1.8) // Errors Box
+
+	rectMode(CORNER)
+	rect(windowWidth*0.7, 2.25*decile, windowWidth*0.3-decile/4, decile*7.7)
+
+	stroke(0, 0)
+	fill(...colour2, alpha) // Secondary colour fills
+	rect(windowWidth*0.7+decile/10, 2.15*decile, windowWidth*0.3-decile/4, decile*7.7)
+	rectMode(CENTER)
+	triangle(windowWidth*0.59, decile*0.25, windowWidth*0.59, decile*1.75, windowWidth*0.6625, decile*1.75)
+	rect(windowWidth*0.35, decile, windowWidth*0.48125, decile*1.5)
+	rect(windowWidth*0.075, decile, windowWidth*0.025, decile*1.5)
+	rect(windowWidth*0.04, decile, windowWidth*0.0125, decile*1.5)
+	rect(windowWidth*0.02, decile, windowWidth*0.00625, decile*1.5)
+	rect(windowWidth*0.5225, decile*8.65, windowWidth*0.2, decile*1.8) // Start button
+	triangle(windowWidth*0.6224, decile*9.55, windowWidth*0.6224, decile*7.75, windowWidth*0.67, decile*7.75)
+
+	rect(windowWidth*0.21, decile*8.65, windowWidth*0.38, decile*1.8) // Errors Box
+
+	fill((colour1[0]+colour2[0])/2, (colour1[1]+colour2[1])/2, (colour1[2]+colour2[2])/2, alpha) // Avg colour
+	rect(windowWidth*0.1775, decile*4.3, windowWidth*0.275, decile*1.5) // Black and white outlines interior boxes
+	rect(windowWidth*0.5225, decile*4.3, windowWidth*0.275, decile*1.5)
+	rect(windowWidth*0.1775, decile*6.05, windowWidth*0.275, decile*1.5)
+	rect(windowWidth*0.5225, decile*6.05, windowWidth*0.275, decile*1.5)
+
+	rect(windowWidth*0.1775, decile*2.75+5, windowWidth*0.15, decile*1) // Top bit
+	rect(windowWidth*0.5225, decile*2.75+5, windowWidth*0.15, decile*1)
+
+	triangle(windowWidth*0.252, (decile*2.75+5), windowWidth*0.252, (decile*2.75+5)-decile*0.5, windowWidth*0.315, (decile*2.75+5)-decile*0.5)
+	triangle(windowWidth*0.252, (decile*2.75+5)+decile*0.5, windowWidth*0.252, (decile*2.75+5)-decile*0.5, windowWidth*0.2842, (decile*2.75+5)-decile*0.5)
+	triangle(windowWidth*0.103, (decile*2.75+5), windowWidth*0.103, (decile*2.75+5)-decile*0.5, windowWidth*0.04, (decile*2.75+5)-decile*0.5)
+	triangle(windowWidth*0.103, (decile*2.75+5)+decile*0.5, windowWidth*0.103, (decile*2.75+5)-decile*0.5, windowWidth*0.0715, (decile*2.75+5)-decile*0.5)
+
+	triangle(windowWidth*0.597, (decile*2.75+5), windowWidth*0.597, (decile*2.75+5)-decile*0.5, windowWidth*0.66, (decile*2.75+5)-decile*0.5)
+	triangle(windowWidth*0.597, (decile*2.75+5)+decile*0.5, windowWidth*0.597, (decile*2.75+5)-decile*0.5, windowWidth*0.62992, (decile*2.75+5)-decile*0.5)
+	triangle(windowWidth*0.448, (decile*2.75+5), windowWidth*0.448, (decile*2.75+5)-decile*0.5, windowWidth*0.385, (decile*2.75+5)-decile*0.5)
+	triangle(windowWidth*0.448, (decile*2.75+5)+decile*0.5, windowWidth*0.448, (decile*2.75+5)-decile*0.5, windowWidth*0.4165, (decile*2.75+5)-decile*0.5)
+
+
+	fill(...colour1, alpha) // Corner negative triangles
+	triangle(windowWidth, windowHeight*0.2, windowWidth, windowHeight*0.2+decile*0.75, windowWidth-decile*0.75, windowHeight*0.2)
+
+	fill(...colour2, alpha)
+	triangle(windowWidth*0.039, decile*5.06, windowWidth*0.039, decile*4.51, windowWidth*0.06, decile*5.06)
+	triangle(windowWidth*0.316, decile*5.06, windowWidth*0.316, decile*4.51, windowWidth*0.295, decile*5.06)
+	triangle(windowWidth*0.384, decile*5.06, windowWidth*0.384, decile*4.51, windowWidth*0.405, decile*5.06)
+	triangle(windowWidth*0.661, decile*5.06, windowWidth*0.661, decile*4.51, windowWidth*0.64, decile*5.06)
+	triangle(windowWidth*0.039, decile*6.81, windowWidth*0.039, decile*6.26, windowWidth*0.06, decile*6.81)
+	triangle(windowWidth*0.316, decile*6.81, windowWidth*0.316, decile*6.26, windowWidth*0.295, decile*6.81)
+	triangle(windowWidth*0.384, decile*6.81, windowWidth*0.384, decile*6.26, windowWidth*0.405, decile*6.81)
+	triangle(windowWidth*0.661, decile*6.81, windowWidth*0.661, decile*6.26, windowWidth*0.64, decile*6.81)
+
+	fill(255, alpha) // Text
+	strokeWeight(3)
+	stroke(0, alpha)
+	textSize(1.5*decile)
+	text(title, windowWidth*0.35, windowHeight*0.15)
+	textSize(decile/4)
+	textAlign(CORNER)
+	rectMode(CORNERS)
+	strokeWeight(1)
+	text(desc + "\n\n\n" + descHotkeys, windowWidth*0.7+decile/4, 2.5*decile, windowWidth*0.3-decile/4, decile*7.5)
+
+	textSize(decile*0.75)
+	textAlign(CENTER)
+	stroke(0, 0)
+	fill(255, alpha)
+	text("White", windowWidth*0.1775, decile*3.1)
+	fill(0, alpha)
+	text("Black", windowWidth*0.5225, decile*3.1)
+
+	textAlign(LEFT)
+	strokeWeight(0.4)
+	fill(255, alpha)
+	textSize(decile*0.4)
+	text("Player:", windowWidth*0.05, decile*4)
+	text("Timer:", windowWidth*0.05, decile*5.7)
+	push()
+	textSize(decile*0.6)
+	text("<", windowWidth*0.075, decile*4.9)
+	pop()
+	fill(0, alpha)
+	text("Player:", windowWidth*0.395, decile*4)
+	text("Timer:", windowWidth*0.395, decile*5.7)
+	push()
+	textSize(decile*0.6)
+	text("<", windowWidth*0.42, decile*4.9)
+	pop()
+
+	textAlign(RIGHT)
+	fill(255, alpha)
+	push()
+	textSize(decile*0.6)
+	text(">", windowWidth*0.28, decile*4.9)
+	pop()
+	text(`(${wPlayer}/6)`, windowWidth*0.305, decile*4)
+	text("?", windowWidth*0.305, decile*5.7)
+	fill(0, alpha)
+	push()
+	textSize(decile*0.6)
+	text(">", windowWidth*0.625, decile*4.9)
+	pop()
+	text(`(${bPlayer}/6)`, windowWidth*0.65, decile*4)
+	text("?", windowWidth*0.65, decile*5.7)
+
+	textAlign(CENTER)
+	textSize(decile*0.6)
+	fill(255, alpha)
+	text(players[wPlayer-1], windowWidth*0.1775, decile*4.9)
+	text(":  +", windowWidth*0.1775, decile*6.525)
+
+	fill(0, alpha)
+	text(players[bPlayer-1], windowWidth*0.5225, decile*4.9)
+	text(":  +", windowWidth*0.5225, decile*6.525)
+
+	fill(255, alpha)
+	strokeWeight(2)
+	stroke(0, alpha)
+	textSize(1.25*decile)
+	text("Start!", windowWidth*0.5305, decile*9.075)
+
+	let ratioX = mouseX/windowWidth
+	let ratioY = mouseY/windowHeight
+	textSize(decile/3)
+	textAlign(CENTER, CENTER)
+	rectMode(CENTER)
+	if (0.525 <= ratioY && ratioY <= 0.575 && ((0.285 <= ratioX && ratioX <= 0.315) || (0.63 <= ratioX && ratioX <= 0.66))) {
+		fill(...colour2, alpha)
+		stroke(...colour3, alpha)
+		rect(mouseX+windowWidth*0.155-decile*0.25, mouseY-decile*2.25, windowWidth*0.31, decile*5, decile/2)
+		fill(255, alpha)
+		stroke(0, alpha)
+		strokeWeight(1) // No, there isnt an easier way to colour everything... I looked... :C
+		text("Time is given in the format:\n\n\n\n\n\n\n\nNote that increment is given   \nin seconds and it refers to    \nthe time added after each move.", mouseX+windowWidth*0.155-decile*0.25, mouseY-decile*2.25)
+		text("\n\n  :  + \n\n\n\n\n\n\n\n", mouseX+windowWidth*0.155-decile*0.25, mouseY-decile*2.25)
+		fill(235, 192, 52)
+		text("\n\nmm     \n\n\n\n\n\n\n\n", mouseX+windowWidth*0.155-decile*0.25, mouseY-decile*2.25)
+		fill(90, 211, 219)
+		text("\n\n   ss  \n\n\n\n\n\n\n\n", mouseX+windowWidth*0.155-decile*0.25, mouseY-decile*2.25)
+		fill(151, 18, 204)
+		text("\n\n      i\n\n\n\n\n\n\n\n", mouseX+windowWidth*0.155-decile*0.25, mouseY-decile*2.25)
+		fill(235, 192, 52)
+		text("\n\n\n\nm   minutes\n\n\n\n\n\n", mouseX+windowWidth*0.155-decile*0.25, mouseY-decile*2.25)
+		fill(90, 211, 219)
+		text("\n\n\n\n\ns   seconds\n\n\n\n\n", mouseX+windowWidth*0.155-decile*0.25, mouseY-decile*2.25)
+		fill(151, 18, 204)
+		text("\n\n\n\n\n\ni   increment\n\n\n\n", mouseX+windowWidth*0.155-decile*0.25, mouseY-decile*2.25)
+		fill(255)
+		text("\n\n\n\n  =        \n\n\n\n\n\n", mouseX+windowWidth*0.155-decile*0.25, mouseY-decile*2.25)
+		text("\n\n\n\n\n  =        \n\n\n\n\n", mouseX+windowWidth*0.155-decile*0.25, mouseY-decile*2.25)
+		text("\n\n\n\n\n\n  =          \n\n\n\n", mouseX+windowWidth*0.155-decile*0.25, mouseY-decile*2.25)
+	}
+	pop()
+}
+
+function mouseHover() {
+	if (menuDebounce) {
+		if (this.html() === "Back" && backDebounce) {
+			if (buttons.divs["top"].html() !== "Play") {
+				sfx["hover"].play()
+				this.style("width: 17vw; left: 82vw; background-color: #F44336")
+			}
+		} else if (mode === "menu") {
+			sfx["hover"].play()
+			this.style(`width: ${buttons.width[this.html()] + 10}vw; background-color: ${buttons.vColour[this.html()]}`)
+		}
+	}
+}
+
+function mouseNotHover() {
+	if (menuDebounce) {
+		if (this.html() === "Back" && backDebounce) {
+			this.style("width: 14vw; left: 85vw; background-color: #4A4A4A")
+		} else if (mode === "menu") {
+			this.style(`width: ${buttons.width[this.html()]}vw; background-color: ${buttons.uColour[this.html()]}`)
+		}
+	}
+}
+
+function mouseClickedElement() {
+	let clickedButton = this.html()
+
+	if (menuDebounce && mode === "menu") {
+		switch (clickedButton) {
+			case "Play":
+			case "Puzzles":
+			case "Credits":
+				sfx["click1"].play()
+				break
+	
+			case "Standard":
+			case "Chess960":
+			case "Custom":
+			case "Classic":
+			case "Rhythm":
+			case "Solo":
+				sfx["click2"].play()
+		}
+	}
+
+	if (clickedButton === "Back") { ///// If back button pressed
+		if (mode === "game") {backTime = time}
+		else if (mode === "start") {backStartTime = time}
+		mode = "menu"
+		backDebounce = false
+		sfx["back"].play()
+		if (buttons.divs["top"].html() !== "Play") {
+			let prevButtons
+			for (let div in buttons.divs) {
+				buttons.divs[div].style("opacity: 0; width: 0vw")
+			}
+
+			switch (buttons.divs["top"].html()) {
+				case "Standard":
+				case "Classic": // Remove back button
+					backButton.style("opacity: 0; background-color: #4A4A4A; width: 0vw; left: 100vw")
+					prevButtons = {
+						"top": "Play",
+						"middle": "Puzzles",
+						"bottom": "Credits"
+					}; break
+			}
+
+
+			setTimeout(() => {
+				menuDebounce = true
+				backDebounce = true
+				for (let v of ["top", "middle", "bottom"]) {
+					let newText = prevButtons[v]
+					buttons.divs[v].html(newText)
+					buttons.divs[v].style(`opacity: 0.9; background-color: ${buttons.uColour[newText]}; width: ${buttons.width[newText]}vw`)
+				}
+			}, 750)
+		} else {menuDebounce = true}
+
+
+	} else if (menuDebounce && mode === "menu") {
+		menuDebounce = false
+
+  		if (["Play", "Puzzles"].includes(clickedButton)) { // every other button
+			for (let div in buttons.divs) {
+				buttons.divs[div].style("opacity: 0; width: 0vw")
+
+				setTimeout(() => {
+					menuDebounce = true // Bring back back button
+					backButton.style("width: 14vw; left: 85vw; opacity: 0.9; background-color: #4A4A4A")
+					for (let v of ["top", "middle", "bottom"]) {
+						let newText = buttons[clickedButton][v]
+						buttons.divs[v].html(newText)
+						buttons.divs[v].style(`opacity: 0.9; background-color: ${buttons.uColour[newText]}; width: ${buttons.width[newText]}vw`)
+					}			
+				}, 750)
+			}
+		} else if (["Standard", "Chess960", "Custom"].includes(clickedButton)) { ///// Standard Gamemode /////
+			clickedTime = time
+			transitionDuration = 250
+			currentTransition = ["fadeIn", "sine"]
+
+			if (clickedButton === "Standard") {
+				// menuPreset = ["Standard", descStandard, [203, 205, 209], [132, 133, 135], [71, 72, 74]]
+				menuPreset = ["Standard", descStandard, [51, 153, 255], [0, 77, 153], [0, 34, 102]]
+			} else if (clickedButton === "Chess960") {
+				menuPreset = ["Chess960", desc960, [212, 111, 17], [133, 71, 15], [71, 41, 14]]
+			} else {
+				menuPreset = ["Custom", descCustom, [50, 168, 82], [29, 84, 44], [21, 46, 28]]
+			}
+
+			backButton.style("opacity: 0; background-color: #4A4A4A; width: 0vw; left: 100vw")
+			for (let v of ["top", "middle", "bottom"]) {
+				let newText = buttons.divs[v].html()
+				buttons.divs[v].html(newText)
+				buttons.divs[v].style(`opacity: 0; background-color: ${buttons.uColour[newText]}; width: 0vw`)
+			}
+			
+			setTimeout(() => { // Fade out | part, sine //////////////////////// START MENU
+				mode = "start"
+
+				timeInputs["wMins"].value("10"); timeInputs["wSecs"].value("00"); timeInputs["wIncr"].value("0")
+				timeInputs["bMins"].value("10"); timeInputs["bSecs"].value("00"); timeInputs["bIncr"].value("0")
+				wPlayer = 1; bPlayer = 1
+				clickedTime = time
+				currentTransition = ["fadeOut", "cosine"]
+				
+				setTimeout(() => {
+					menuDebounce = true
+					transitionDivs["div1"].position(0, 0)
+					transitionDivs["div1"].size(0, 0)
+					transitionDivs["div2"].position(0, 0)
+					transitionDivs["div2"].size(0, 0)
+					currentTransition = [null, null]
+					backButton.style("width: 14vw; left: 85vw; opacity: 0.9; background-color: #4A4A4A")
+				}, 250)
+			}, 250)
+		} else { // In progress gamemodes
+			menuDebounce = true
+			sfx["error"].play()
+		}
+	}
+}
+
+function transition(start, duration, type, style="linear") {
+	push()
+	let col = 0
+	fill(col)
+	stroke(0, 0)
+	let t = factor(start, duration, style)
+	switch (type) {
+		////////// Transition In //////////
+		case "ribbon":
+			let slide = lerp(0, sqrt((windowWidth+windowHeight/2)**2/2), t)
+			transitionDivs["div1"].position(0, -windowWidth*5)
+			transitionDivs["div1"].size(slide, windowWidth*10)
+			transitionDivs["div1"].style("background-color: black; transform-origin: 0% 50%; transform: rotate(45deg); opacity: 1")
+
+			transitionDivs["div2"].position(0, windowHeight-windowWidth*5)
+			transitionDivs["div2"].size(slide, windowWidth*10)
+			transitionDivs["div2"].style("background-color: black; transform-origin: 0% 50%; transform: rotate(-45deg); opacity: 1")
+
+			// triangle(0, 0, 0, slide, slide, 0)
+			// triangle(0, windowHeight, 0, windowHeight - slide, slide, windowHeight)
+			break
+
+		case "shutter":
+			let slantAng = atan2(windowWidth, windowHeight)
+			transitionDivs["div1"].position(0, -windowWidth*5)
+			transitionDivs["div1"].size(lerp(0, windowWidth*sin(HALF_PI-slantAng), t), windowWidth*10)
+			transitionDivs["div1"].style(`background-color: black; transform-origin: 0% 50%; transform: rotate(${slantAng}rad); opacity: 1`)
+
+			transitionDivs["div2"].position(windowWidth, windowHeight-windowWidth*5)
+			transitionDivs["div2"].size(lerp(0, windowWidth*sin(HALF_PI-slantAng), t), windowWidth*10)
+			transitionDivs["div2"].style(`background-color: black; transform-origin: 0% 50%; transform: rotate(${PI+slantAng}rad); opacity: 1`)
+
+			push(); stroke(col); strokeWeight(3); if (t === 1) {line(0, windowHeight, windowWidth, 0)}; pop()
+			break
+
+		case "drop":
+			//rect(0, 0, windowWidth, lerp(0, windowHeight, t))
+			break
+
+		case "slide":
+			transitionDivs["div1"].position(0, 0)
+			transitionDivs["div1"].size(lerp(0, windowWidth, t), windowHeight)
+			transitionDivs["div1"].style("background-color: black; transform: rotate(0deg); transform-origin: center; opacity: 1")
+
+			transitionDivs["div2"].position(0, 0)
+			transitionDivs["div2"].size(0, 0)
+			break
+
+		case "fadeIn":
+			transitionDivs["div1"].position(0, 0)
+			transitionDivs["div1"].size(windowWidth, windowHeight)
+			transitionDivs["div1"].style(`background-color: black; transform: rotate(0deg); transform-origin: center; opacity: ${t}`)
+
+			transitionDivs["div2"].position(0, 0)
+			transitionDivs["div2"].size(0, 0)
+			break
+
+		////////// Transition Out //////////
+		case "pull":
+			transitionDivs["div1"].position(0, 0)
+			transitionDivs["div1"].size(windowWidth/2, lerp(windowHeight, 0, min(t*2, 1)))
+			transitionDivs["div1"].style("background-color: black; transform: rotate(0deg); transform-origin: center; opacity: 1")
+
+			transitionDivs["div2"].position(windowWidth/2, lerp(0, windowHeight, t >= 0.5 ? (t-0.5)*2 : 0))
+			transitionDivs["div2"].size(windowWidth/2, lerp(windowHeight, 0, t >= 0.5 ? (t-0.5)*2 : 0))
+			transitionDivs["div2"].style("background-color: black; transform: rotate(0deg); transform-origin: center; opacity: 1")
+
+			// triangle(lerp(0, windowWidth, t), lerp(0, windowHeight, t), 0, windowHeight, windowWidth, windowHeight)
+			// triangle(windowWidth, windowHeight, windowWidth, 0, lerp(0, windowWidth, t), lerp(0, windowHeight, t))
+			// push()
+			// stroke(col)
+			// line(lerp(0, windowWidth, t), lerp(0, windowHeight, t), windowWidth, windowHeight)
+			// pop()
+			break
+
+		case "fadeOut": //// NEEDS RESETTING
+			transitionDivs["div1"].position(0, 0)
+			transitionDivs["div1"].size(windowWidth, windowHeight)
+			transitionDivs["div1"].style(`background-color: black; transform: rotate(0deg); transform-origin: center; opacity: ${1-t}`)
+
+			transitionDivs["div2"].position(0, 0)
+			transitionDivs["div2"].size(0, 0)
+			break
+
+		case "lift":
+			transitionDivs["div1"].position(0, 0)
+			transitionDivs["div1"].size(windowWidth, lerp(windowHeight, 0, t))
+			transitionDivs["div1"].style("background-color: black; transform: rotate(0deg); transform-origin: center; opacity: 1")
+
+			transitionDivs["div2"].position(0, 0)
+			transitionDivs["div2"].size(0, 0)
+			break
+
+		case "part":
+			transitionDivs["div1"].position(0, 0)
+			transitionDivs["div1"].size(lerp(windowWidth/2, 0, t), windowHeight)
+			transitionDivs["div1"].style("background-color: black; transform: rotate(0deg); transform-origin: center; opacity: 1")
+
+			transitionDivs["div2"].position(lerp(windowWidth/2, windowWidth, t), 0)
+			transitionDivs["div2"].size(lerp(windowWidth/2, 0, t), windowHeight)
+			transitionDivs["div2"].style(`background-color: black; transform: rotate(0deg); transform-origin: center; opacity: 1`)
+			break
+	} pop()
+}
+
+function factor(start, duration, style="linear") {
+	let x = min(1, (time - start) / duration)
+	switch (style) {
+		case "sine":
+			return sin(HALF_PI * x)
+
+		case "cosine":
+			return cos(HALF_PI * x + PI) + 1
+
+		case "circular":
+			return sqrt(2*x - x**2)
+
+		case "exponential":
+			return 1000 ** (x-1)
+
+		case "elastic":
+			return 1 - (x - 1)**2 * cos(7*x)
+
+		case "bounce":
+			return 1 - (x - 1)**2 * abs(cos(7*x))
+		
+		case "linear":
+			return x
+
+		default:
+			return x**style
+	}
+}
+
+function getRankandFileFromMouse(x, y) {
+	if (min(x,y) > decile && max(x,y) < 9 * decile) {
+		let rank = floor(x/decile)
+		let file = floor(y/decile)
+		if (!game.flip) {rank = 9 - rank; file = 9 - file}
+		return [rank, file]
+	}
+	return [false, false]
+}
+
+function mousePressed() {
+	[rank, file] = getRankandFileFromMouse(mouseX, mouseY)
+	if (!rank || !file) {mouseBuffer = [false, false, false]}
+	if (mode === "game") {
+		if (mouseButton === LEFT) {
+			if (windowHeight*0.05 <= mouseY && mouseY <= windowHeight*0.15) { // Utility buttons
+				if (windowWidth*0.65 <= mouseX && mouseX <= windowWidth*0.65+decile) {
+					// Restart
+					game.resetBoard()
+				} else if (windowWidth*0.7 <= mouseX && mouseX <= windowWidth*0.7+decile) {
+					// Undo
+					game.undoMove()
+				} else if (windowWidth*0.75 <= mouseX && mouseX <= windowWidth*0.75+decile) {
+					// Flip
+					game.flip = !game.flip
+				} else if (windowWidth*0.8 <= mouseX && mouseX <= windowWidth*0.8+decile) {
+					game.printMoves()
+					// Print
+				}
+			}
+			game.highlightSquares = []; game.arrowSquares = []
+			if (game.mode === "promo") { // Promotion
+				if (min(rank, file) >= 4 && max(rank, file) <= 5) {
+					let piece
+					if (rank === 4 && file === 4) {
+						piece = game.turn ? "Q" : "q"
+					} else if (rank === 5 && file === 4) {
+						piece = game.turn ? "R" : "r"
+					} else if (rank === 4 && file === 5) {
+						piece = game.turn ? "N" : "n"
+					} else if (rank === 5 && file === 5) {
+						piece = game.turn ? "B" : "b"
+					} // Add promotion check here
+					game.turn = !game.turn
+					game.bitboards[game.bitboards.length-1][piece].push([game.promoSquare[0], game.promoSquare[1]])
+					game.board[game.promoSquare[1]-1][game.promoSquare[0]-1] = piece
+					game.boardHistory[game.boardHistory.length-1][game.promoSquare[1]-1][game.promoSquare[0]-1] = piece
+					game.moveHistory[game.moveHistory.length-1] += "=" + piece.toUpperCase()
+					if (game.isCheck(...game.bitboards[game.bitboards.length-1][!game.turn ? "k" : "K"][0], game.turn, game.bitboards[game.bitboards.length-1], game.board)) {
+						game.moveHistory[game.moveHistory.length-1] += "+"
+					} game.mode = "board"
+				}
+			}
+		}
+
+		if (rank && file) {
+			if (mouseBuffer[2] === true && mouseButton === LEFT) {
+				if ((mouseBuffer[0] !== rank || mouseBuffer[1] !== file) && mouseButton === LEFT && (game.turn ? game.whitePlayer : game.blackPlayer) === "Human") {
+					let piece = game.board[mouseBuffer[1] - 1][mouseBuffer[0] - 1]
+					let move = game.handleMove(mouseBuffer[0], mouseBuffer[1], rank, file, piece, game.copyBitboard(game.bitboards[game.bitboards.length-1]), game.copyBoard(game.board), [...game.canCastle[game.canCastle.length-1]])
+					if (move) {game.updateAttributes(move)}
+				} mouseBuffer = [false, false, false]
+				
+			} else if (mouseButton !== LEFT || game.board[file-1][rank-1] !== "#") {
+				mouseBuffer = [rank, file, mouseButton]
+			} else {mouseBuffer = [false, false, false]}
+		} else {mouseBuffer = [false, false, false]}
+
+		if (decile*8 <= mouseY && mouseY <= decile*9) { // Move History Buttons
+			let buttonWidth = decile * 15.25 + (windowWidth - decile * 1.75)
+			let _buttonWidth = decile * 15.25 - (windowWidth - decile * 1.75)
+			if (buttonWidth/2 + _buttonWidth*0.7275 <= mouseX && mouseX <= buttonWidth/2 + _buttonWidth*0.3975) {
+				game.move = 0
+			} else if (buttonWidth/2 + _buttonWidth*0.3525 <= mouseX && mouseX <= buttonWidth/2 + _buttonWidth*0.0225) {
+				game.move = max(game.move-1, 0)
+			} else if (buttonWidth/2 - _buttonWidth*0.0225 <= mouseX && mouseX <= buttonWidth/2 - _buttonWidth*0.3525) {
+				game.move = min(game.move+1, game.boardHistory.length-1)
+			} else if (buttonWidth/2 - _buttonWidth*0.3975 <= mouseX && mouseX <= buttonWidth/2 - _buttonWidth*0.7275) {
+				game.move = game.boardHistory.length - 1
+			}
+		} if (rank && file) {game.move = game.boardHistory.length - 1}
+	
+	} else if (mode === "start") {
+		if (menuDebounce && windowWidth*0.4225 <= mouseX && mouseX <= windowWidth*0.6225 && decile*7.75 <= mouseY && mouseY <= decile*9.55) {
+			menuDebounce = false
+			sfx["click3"].play()
+			clickedTime = time
+			transitionDuration = 1500
+	
+			if (menuPreset[0] === "Standard") {
+				currentTransition = ["ribbon", "linear"]
+			} else if (menuPreset[0] === "Chess960") {
+				currentTransition = ["shutter", "bounce"]
+			} else { // do the tidal wave thing
+				currentTransition = ["slide", "sine"]
+			}
+	
+			backButton.style("opacity: 0; background-color: #4A4A4A; width: 0vw; left: 100vw")
+			for (let v of ["top", "middle", "bottom"]) {
+				let newText = buttons.divs[v].html()
+				buttons.divs[v].html(newText)
+				buttons.divs[v].style(`opacity: 0; background-color: ${buttons.uColour[newText]}; width: 0vw`)
+			}
+			
+			setTimeout(() => {
+				mode = "game"
+				for (let box in timeInputs) { // Input validation.
+					if (isNaN(timeInputs[box].value())) {
+						if (box.slice(0, 1) === "w") {
+							timeInputs["wMins"].value("10"); timeInputs["wSecs"].value("00"); timeInputs["wIncr"].value("0")
+						} else {
+							timeInputs["bMins"].value("10"); timeInputs["bSecs"].value("00"); timeInputs["bIncr"].value("0")
+						}
+					}
+				}
+
+				game = new Chess(startFEN, players[wPlayer-1], players[bPlayer-1], game.timeToMs(timeInputs["wMins"].value(), timeInputs["wSecs"].value()), game.timeToMs(timeInputs["bMins"].value(), timeInputs["bSecs"].value()), timeInputs["wIncr"].value()*1000, timeInputs["bIncr"].value()*1000)
+				clickedTime = time
+				if (menuPreset[0] === "Standard") {
+					currentTransition = ["lift", "cosine"]
+				} else if (menuPreset[0] === "Chess960") {
+					currentTransition = ["part", "sine"]
+				} else { // do the tidal wave thing
+					currentTransition = ["pull", "sine"]
+				}			
+				setTimeout(() => {
+					menuDebounce = true
+					currentTransition = [null, null]
+					backButton.style("width: 14vw; left: 85vw; opacity: 0.9; background-color: #4A4A4A")
+				}, 1500)
+			}, 1750)
+		} else if (decile*4.25 <= mouseY && mouseY <= decile*5.1) { // Switch player.
+			if (windowWidth*0.065 <= mouseX && mouseX <= windowWidth*0.105) {
+				wPlayer = wPlayer === 1 ? 6 : wPlayer-1
+			} else if (windowWidth*0.25 <= mouseX && mouseX <= windowWidth*0.29) {
+				wPlayer = wPlayer === 6 ? 1 : wPlayer+1
+			} else if (windowWidth*0.405 <= mouseX && mouseX <= windowWidth*0.445) {
+				bPlayer = bPlayer === 1 ? 6 : bPlayer-1
+			} else if (windowWidth*0.595 <= mouseX && mouseX <= windowWidth*0.635) {
+				bPlayer = bPlayer === 6 ? 1 : bPlayer+1
+			}
+		}
+	}
+}
+
+function mouseReleased() {
+	[rank, file] = getRankandFileFromMouse(mouseX, mouseY)
+	if (mouseBuffer.join("") === [rank, file, RIGHT].join("") && rank && file) { // Highlight Squares
+		if (game.highlightSquares.every(arr => arr.join("") !== [rank, file].join(""))) {
+			game.highlightSquares.push([rank, file])
+		} else {
+			game.highlightSquares = game.highlightSquares.filter(v => v.join("") !== [rank, file].join(""))
+		}
+	} else if (mouseBuffer[2] === RIGHT && mouseBuffer[0] && mouseBuffer[1] && rank && file) { // Arrow Squares
+		if (game.arrowSquares.every(arr => arr.join("") !== [mouseBuffer[0]+0.5, mouseBuffer[1]+0.5, rank+0.5, file+0.5].join(""))) {
+			game.arrowSquares.push([mouseBuffer[0]+0.5, mouseBuffer[1]+0.5, rank+0.5, file+0.5])
+		} else {
+			game.arrowSquares = game.arrowSquares.filter(v => v.join("") !== [mouseBuffer[0]+0.5, mouseBuffer[1]+0.5, rank+0.5, file+0.5].join(""))
+		}
+	} else if (mouseBuffer[2] === LEFT && (mouseBuffer[0] !== rank || mouseBuffer[1] !== file)) { // Handle Move
+		let piece = game.board[mouseBuffer[1] - 1][mouseBuffer[0] - 1]
+		if (game.getColour(piece) === game.turn && piece !== "#" && (game.turn ? game.whitePlayer : game.blackPlayer) === "Human") {
+			let move = game.handleMove(mouseBuffer[0], mouseBuffer[1], rank, file, piece, game.copyBitboard(game.bitboards[game.bitboards.length-1]), game.copyBoard(game.board), [...game.canCastle[game.canCastle.length-1]])
+			if (move) {game.updateAttributes(move)}
+		} mouseBuffer = [false, false, false]
+	} else if (mouseBuffer[2] === LEFT && (mouseBuffer[0] === rank && mouseBuffer[1] === file)) { // Possible Move
+		let piece = game.board[file - 1][rank - 1]
+		if (game.getColour(piece) === game.turn && piece !== "#") {
+			mouseBuffer[2] = true
+		}
+	}
+}
+
+function keyPressed() {
+	switch (key) {
+		case "x":
+			game.flip = !game.flip
+			break
+
+		case "r":
+			game.resetBoard()
+			break
+
+		case "u":
+			game.undoMove()	
+			break
+
+		case "p":
+			game.printMoves()
+			break
+
+		case "ArrowLeft":
+			game.move = max(game.move-1, 0)
+			break
+
+		case "ArrowRight":
+			game.move = min(game.move+1, game.boardHistory.length-1)
+			break
+
+		case "ArrowUp":
+			game.move = 0
+			break
+
+		case "ArrowDown":
+			game.move = game.boardHistory.length - 1
+			break
+	}
 }
 
 class Chess { // Main Section of Code
@@ -250,7 +949,6 @@ class Chess { // Main Section of Code
 		this.turn = true
 		this.flip = true
 		this.move = 0
-		// this.rookStartX = [this.bitboards["R"][0][0], this.bitboards["R"][1][0]]
 	}
 
 	initiateBoard(fen) {
@@ -339,7 +1037,7 @@ class Chess { // Main Section of Code
 		this.drawIcons()
 		this.drawUtility()
 		this.drawPieceDeficit()
-		if ((windowWidth/windowHeight) >= 1.95) {this.drawNotation()}
+		if ((windowWidth/windowHeight) >= 1.85) {this.drawNotation()}
 		if (this.mode === "promo") {this.promotionUI()}
 		pop()
 	}
@@ -382,8 +1080,9 @@ class Chess { // Main Section of Code
 		let blackTextPos = this.flip ? 1.85 : 8.85
 		let whiteIconPos = this.flip ? 8 : 1
 		let blackIconPos = this.flip ? 1 : 8
-		text(this.whitePlayer, decile*10.85, decile*whiteTextPos)
-		text(this.blackPlayer, decile*10.85, decile*blackTextPos)
+		textAlign(CORNER)
+		text(this.whitePlayer, decile*9.25, decile*whiteTextPos)
+		text(this.blackPlayer, decile*9.25, decile*blackTextPos)
 		// image(icons[this.whitePlayer], decile*12.5, decile*whiteIconPos, decile, decile)
 		// image(icons[this.blackPlayer], decile*12.5, decile*blackIconPos, decile, decile)
 
@@ -746,7 +1445,7 @@ class Chess { // Main Section of Code
 		if (moves.some(v => v[0] === x2 && v[1] === y2) && this.mode === "board") { // Valid Moves
 			if (!query) {sfx["move"].play()}
 
-			if (findNotation) {
+			if (!query) {
 				let pieceLocator = locator[piece].filter(v => v[0] !== x1 || v[1] !== y1)
 				let endSquare = this.getNotation(x1, y1)
 				let prevPassant = this.passantHistory[this.passantHistory.length-1]
@@ -919,667 +1618,40 @@ class Chess { // Main Section of Code
 	}
 }
 
-function drawMenu(title, desc, colour1, colour2, colour3) {
-	let offset = decile/10
-	let alpha = (mode === "start") ? 255 : 255 - (255 * factor(backStartTime, 500, "sine"))
-
-	timeInputs["wMins"].position(windowWidth*0.1775 - decile*1.45, decile*5.975)
-	timeInputs["wSecs"].position(windowWidth*0.1775 - decile*0.45, decile*5.975)
-	timeInputs["wIncr"].position(windowWidth*0.1775 + decile*0.6, decile*5.975)
-
-	timeInputs["bMins"].position(windowWidth*0.5225 - decile*1.45, decile*5.975)
-	timeInputs["bSecs"].position(windowWidth*0.5225 - decile*0.45, decile*5.975)
-	timeInputs["bIncr"].position(windowWidth*0.5225 + decile*0.6, decile*5.975)
-
-	for (let box in timeInputs) {
-		timeInputs[box].size(decile*0.75, decile*0.75)
-		timeInputs[box].style(`opacity: ${alpha/255}`)
-	}
-
-	push() // Background
-	stroke(0, 0)
-	fill(...colour1, alpha)
-	textAlign(CENTER)
-	rect(0, 0, windowWidth*0.6, windowHeight*0.2)
-	triangle(windowWidth*0.6, 0, windowWidth*0.6, windowHeight*0.2, windowWidth*0.7, windowHeight*0.2)
-	rectMode(CENTER)
-	rect(windowWidth/2, windowHeight*0.6, windowWidth, windowHeight*0.8)
-	stroke(...colour1, alpha)
-	line(0, windowHeight*0.2, windowWidth, windowHeight*0.2)
-	strokeWeight(10)
-
-	fill(...colour2, alpha)
-	stroke(255, alpha)
-	rect(windowWidth*0.1775, decile*4.75, windowWidth*0.315, decile*5, decile/2) // White and black outlines
-	stroke(0, alpha)
-	rect(windowWidth*0.5225, decile*4.75, windowWidth*0.315, decile*5, decile/2)
-
-	rectMode(CENTER)
-	stroke(0, 0) // Tertiary colour shading
-	fill(...colour3, alpha)
-	rect(windowWidth*0.35-offset, decile+offset, windowWidth*0.48125, decile*1.5)
-	rect(windowWidth*0.075-offset, decile+offset, windowWidth*0.025, decile*1.5)
-	rect(windowWidth*0.04-offset, decile+offset, windowWidth*0.0125, decile*1.5)
-	rect(windowWidth*0.02-offset, decile+offset, windowWidth*0.00625, decile*1.5)
-	triangle(windowWidth*0.59-offset, decile*0.25+offset, windowWidth*0.59-offset, decile*1.75+offset, windowWidth*0.6625-offset, decile*1.75+offset)
-	
-	rect(windowWidth*0.5225-offset, decile*8.65+offset, windowWidth*0.2, decile*1.8) // Start button
-	triangle(windowWidth*0.6224-offset, decile*9.55+offset, windowWidth*0.6224-offset, decile*7.75+offset, windowWidth*0.67-offset, decile*7.75+offset)
-	rect(windowWidth*0.21-offset, decile*8.65+offset, windowWidth*0.38, decile*1.8) // Errors Box
-
-	rectMode(CORNER)
-	rect(windowWidth*0.7, 2.25*decile, windowWidth*0.3-decile/4, decile*7.7)
-
-	stroke(0, 0)
-	fill(...colour2, alpha) // Secondary colour fills
-	rect(windowWidth*0.7+decile/10, 2.15*decile, windowWidth*0.3-decile/4, decile*7.7)
-	rectMode(CENTER)
-	triangle(windowWidth*0.59, decile*0.25, windowWidth*0.59, decile*1.75, windowWidth*0.6625, decile*1.75)
-	rect(windowWidth*0.35, decile, windowWidth*0.48125, decile*1.5)
-	rect(windowWidth*0.075, decile, windowWidth*0.025, decile*1.5)
-	rect(windowWidth*0.04, decile, windowWidth*0.0125, decile*1.5)
-	rect(windowWidth*0.02, decile, windowWidth*0.00625, decile*1.5)
-	rect(windowWidth*0.5225, decile*8.65, windowWidth*0.2, decile*1.8) // Start button
-	triangle(windowWidth*0.6224, decile*9.55, windowWidth*0.6224, decile*7.75, windowWidth*0.67, decile*7.75)
-
-	rect(windowWidth*0.21, decile*8.65, windowWidth*0.38, decile*1.8) // Errors Box
-
-	fill((colour1[0]+colour2[0])/2, (colour1[1]+colour2[1])/2, (colour1[2]+colour2[2])/2, alpha) // Avg colour
-	rect(windowWidth*0.1775, decile*4.3, windowWidth*0.275, decile*1.5) // Black and white outlines interior boxes
-	rect(windowWidth*0.5225, decile*4.3, windowWidth*0.275, decile*1.5)
-	rect(windowWidth*0.1775, decile*6.05, windowWidth*0.275, decile*1.5)
-	rect(windowWidth*0.5225, decile*6.05, windowWidth*0.275, decile*1.5)
-
-	rect(windowWidth*0.1775, decile*2.75+5, windowWidth*0.15, decile*1) // Top bit
-	rect(windowWidth*0.5225, decile*2.75+5, windowWidth*0.15, decile*1)
-
-	triangle(windowWidth*0.252, (decile*2.75+5), windowWidth*0.252, (decile*2.75+5)-decile*0.5, windowWidth*0.315, (decile*2.75+5)-decile*0.5)
-	triangle(windowWidth*0.252, (decile*2.75+5)+decile*0.5, windowWidth*0.252, (decile*2.75+5)-decile*0.5, windowWidth*0.2842, (decile*2.75+5)-decile*0.5)
-	triangle(windowWidth*0.103, (decile*2.75+5), windowWidth*0.103, (decile*2.75+5)-decile*0.5, windowWidth*0.04, (decile*2.75+5)-decile*0.5)
-	triangle(windowWidth*0.103, (decile*2.75+5)+decile*0.5, windowWidth*0.103, (decile*2.75+5)-decile*0.5, windowWidth*0.0715, (decile*2.75+5)-decile*0.5)
-
-	triangle(windowWidth*0.597, (decile*2.75+5), windowWidth*0.597, (decile*2.75+5)-decile*0.5, windowWidth*0.66, (decile*2.75+5)-decile*0.5)
-	triangle(windowWidth*0.597, (decile*2.75+5)+decile*0.5, windowWidth*0.597, (decile*2.75+5)-decile*0.5, windowWidth*0.62992, (decile*2.75+5)-decile*0.5)
-	triangle(windowWidth*0.448, (decile*2.75+5), windowWidth*0.448, (decile*2.75+5)-decile*0.5, windowWidth*0.385, (decile*2.75+5)-decile*0.5)
-	triangle(windowWidth*0.448, (decile*2.75+5)+decile*0.5, windowWidth*0.448, (decile*2.75+5)-decile*0.5, windowWidth*0.4165, (decile*2.75+5)-decile*0.5)
-
-
-	fill(...colour1, alpha) // Corner negative triangles
-	triangle(windowWidth, windowHeight*0.2, windowWidth, windowHeight*0.2+decile*0.75, windowWidth-decile*0.75, windowHeight*0.2)
-
-	fill(...colour2, alpha)
-	triangle(windowWidth*0.039, decile*5.06, windowWidth*0.039, decile*4.51, windowWidth*0.06, decile*5.06)
-	triangle(windowWidth*0.316, decile*5.06, windowWidth*0.316, decile*4.51, windowWidth*0.295, decile*5.06)
-	triangle(windowWidth*0.384, decile*5.06, windowWidth*0.384, decile*4.51, windowWidth*0.405, decile*5.06)
-	triangle(windowWidth*0.661, decile*5.06, windowWidth*0.661, decile*4.51, windowWidth*0.64, decile*5.06)
-	triangle(windowWidth*0.039, decile*6.81, windowWidth*0.039, decile*6.26, windowWidth*0.06, decile*6.81)
-	triangle(windowWidth*0.316, decile*6.81, windowWidth*0.316, decile*6.26, windowWidth*0.295, decile*6.81)
-	triangle(windowWidth*0.384, decile*6.81, windowWidth*0.384, decile*6.26, windowWidth*0.405, decile*6.81)
-	triangle(windowWidth*0.661, decile*6.81, windowWidth*0.661, decile*6.26, windowWidth*0.64, decile*6.81)
-
-	fill(255, alpha) // Text
-	strokeWeight(3)
-	stroke(0, alpha)
-	textSize(1.5*decile)
-	text(title, windowWidth*0.35, windowHeight*0.15)
-	textSize(decile/4)
-	textAlign(CORNER)
-	rectMode(CORNERS)
-	strokeWeight(1)
-	text(desc + "\n\n\n" + descHotkeys, windowWidth*0.7+decile/4, 2.5*decile, windowWidth*0.3-decile/4, decile*7.5)
-
-	textSize(decile*0.75)
-	textAlign(CENTER)
-	stroke(0, 0)
-	fill(255, alpha)
-	text("White", windowWidth*0.1775, decile*3.1)
-	fill(0, alpha)
-	text("Black", windowWidth*0.5225, decile*3.1)
-
-	textAlign(LEFT)
-	strokeWeight(0.4)
-	fill(255, alpha)
-	textSize(decile*0.4)
-	text("Player:", windowWidth*0.05, decile*4)
-	text("Timer:", windowWidth*0.05, decile*5.7)
-	push()
-	textSize(decile*0.6)
-	text("<", windowWidth*0.075, decile*4.9)
-	pop()
-	fill(0, alpha)
-	text("Player:", windowWidth*0.395, decile*4)
-	text("Timer:", windowWidth*0.395, decile*5.7)
-	push()
-	textSize(decile*0.6)
-	text("<", windowWidth*0.42, decile*4.9)
-	pop()
-
-	textAlign(RIGHT)
-	fill(255, alpha)
-	push()
-	textSize(decile*0.6)
-	text(">", windowWidth*0.28, decile*4.9)
-	pop()
-	text(`(${wPlayer}/6)`, windowWidth*0.305, decile*4)
-	text("?", windowWidth*0.305, decile*5.7)
-	fill(0, alpha)
-	push()
-	textSize(decile*0.6)
-	text(">", windowWidth*0.625, decile*4.9)
-	pop()
-	text(`(${bPlayer}/6)`, windowWidth*0.65, decile*4)
-	text("?", windowWidth*0.65, decile*5.7)
-
-	textAlign(CENTER)
-	textSize(decile*0.6)
-	fill(255, alpha)
-	text(players[wPlayer-1], windowWidth*0.1775, decile*4.9)
-	text(":  +", windowWidth*0.1775, decile*6.525)
-
-	fill(0, alpha)
-	text(players[bPlayer-1], windowWidth*0.5225, decile*4.9)
-	text(":  +", windowWidth*0.5225, decile*6.525)
-
-	fill(255, alpha)
-	strokeWeight(2)
-	stroke(0, alpha)
-	textSize(1.25*decile)
-	text("Start!", windowWidth*0.5305, decile*9.075)
-
-	let ratioX = mouseX/windowWidth
-	let ratioY = mouseY/windowHeight
-	textSize(decile/3)
-	textAlign(CENTER, CENTER)
-	rectMode(CENTER)
-	if (0.525 <= ratioY && ratioY <= 0.575 && ((0.285 <= ratioX && ratioX <= 0.315) || (0.63 <= ratioX && ratioX <= 0.66))) {
-		fill(...colour2, alpha)
-		stroke(...colour3, alpha)
-		rect(mouseX+windowWidth*0.155-decile*0.25, mouseY-decile*2.25, windowWidth*0.31, decile*5, decile/2)
-		fill(255, alpha)
-		stroke(0, alpha)
-		strokeWeight(1) // No, there isnt an easier way to colour everything... I looked... :C
-		text("Time is given in the format:\n\n\n\n\n\n\n\nNote that increment is given   \nin seconds and it refers to    \nthe time added after each move.", mouseX+windowWidth*0.155-decile*0.25, mouseY-decile*2.25)
-		text("\n\n  :  + \n\n\n\n\n\n\n\n", mouseX+windowWidth*0.155-decile*0.25, mouseY-decile*2.25)
-		fill(235, 192, 52)
-		text("\n\nmm     \n\n\n\n\n\n\n\n", mouseX+windowWidth*0.155-decile*0.25, mouseY-decile*2.25)
-		fill(90, 211, 219)
-		text("\n\n   ss  \n\n\n\n\n\n\n\n", mouseX+windowWidth*0.155-decile*0.25, mouseY-decile*2.25)
-		fill(151, 18, 204)
-		text("\n\n      i\n\n\n\n\n\n\n\n", mouseX+windowWidth*0.155-decile*0.25, mouseY-decile*2.25)
-		fill(235, 192, 52)
-		text("\n\n\n\nm   minutes\n\n\n\n\n\n", mouseX+windowWidth*0.155-decile*0.25, mouseY-decile*2.25)
-		fill(90, 211, 219)
-		text("\n\n\n\n\ns   seconds\n\n\n\n\n", mouseX+windowWidth*0.155-decile*0.25, mouseY-decile*2.25)
-		fill(151, 18, 204)
-		text("\n\n\n\n\n\ni   increment\n\n\n\n", mouseX+windowWidth*0.155-decile*0.25, mouseY-decile*2.25)
-		fill(255)
-		text("\n\n\n\n  =        \n\n\n\n\n\n", mouseX+windowWidth*0.155-decile*0.25, mouseY-decile*2.25)
-		text("\n\n\n\n\n  =        \n\n\n\n\n", mouseX+windowWidth*0.155-decile*0.25, mouseY-decile*2.25)
-		text("\n\n\n\n\n\n  =          \n\n\n\n", mouseX+windowWidth*0.155-decile*0.25, mouseY-decile*2.25)
-	}
-	pop()
-}
-
-function mouseHover() {
-	if (menuDebounce) {
-		if (this.html() === "Back" && backDebounce) {
-			if (buttons.divs["top"].html() !== "Play") {
-				sfx["hover"].play()
-				this.style("width: 17vw; left: 82vw; background-color: #F44336")
-			}
-		} else if (mode === "menu") {
-			sfx["hover"].play()
-			this.style(`width: ${buttons.width[this.html()] + 10}vw; background-color: ${buttons.vColour[this.html()]}`)
-		}
-	}
-}
-
-function mouseNotHover() {
-	if (menuDebounce) {
-		if (this.html() === "Back" && backDebounce) {
-			this.style("width: 14vw; left: 85vw; background-color: #4A4A4A")
-		} else if (mode === "menu") {
-			this.style(`width: ${buttons.width[this.html()]}vw; background-color: ${buttons.uColour[this.html()]}`)
-		}
-	}
-}
-
-function mouseClickedElement() {
-	let clickedButton = this.html()
-
-	if (menuDebounce && mode === "menu") {
-		switch (clickedButton) {
-			case "Play":
-			case "Puzzles":
-			case "Credits":
-				sfx["click1"].play()
-				break
-	
-			case "Standard":
-			case "Chess960":
-			case "Custom":
-			case "Classic":
-			case "Rhythm":
-			case "Solo":
-				sfx["click2"].play()
-		}
-	}
-
-	if (clickedButton === "Back") { ///// If back button pressed
-		if (mode === "game") {backTime = time}
-		else if (mode === "start") {backStartTime = time}
-		mode = "menu"
-		backDebounce = false
-		sfx["back"].play()
-		if (buttons.divs["top"].html() !== "Play") {
-			let prevButtons
-			for (let div in buttons.divs) {
-				buttons.divs[div].style("opacity: 0; width: 0vw")
-			}
-
-			switch (buttons.divs["top"].html()) {
-				case "Standard":
-				case "Classic": // Remove back button
-					backButton.style("opacity: 0; background-color: #4A4A4A; width: 0vw; left: 100vw")
-					prevButtons = {
-						"top": "Play",
-						"middle": "Puzzles",
-						"bottom": "Credits"
-					}; break
-			}
-
-
-			setTimeout(() => {
-				menuDebounce = true
-				backDebounce = true
-				for (let v of ["top", "middle", "bottom"]) {
-					let newText = prevButtons[v]
-					buttons.divs[v].html(newText)
-					buttons.divs[v].style(`opacity: 0.9; background-color: ${buttons.uColour[newText]}; width: ${buttons.width[newText]}vw`)
-				}
-			}, 750)
-		} else {menuDebounce = true}
-
-
-	} else if (menuDebounce && mode === "menu") {
-		menuDebounce = false
-
-  		if (["Play", "Puzzles"].includes(clickedButton)) { // every other button
-			for (let div in buttons.divs) {
-				buttons.divs[div].style("opacity: 0; width: 0vw")
-
-				setTimeout(() => {
-					menuDebounce = true // Bring back back button
-					backButton.style("width: 14vw; left: 85vw; opacity: 0.9; background-color: #4A4A4A")
-					for (let v of ["top", "middle", "bottom"]) {
-						let newText = buttons[clickedButton][v]
-						buttons.divs[v].html(newText)
-						buttons.divs[v].style(`opacity: 0.9; background-color: ${buttons.uColour[newText]}; width: ${buttons.width[newText]}vw`)
-					}			
-				}, 750)
-			}
-		} else if (["Standard", "Chess960", "Custom"].includes(clickedButton)) { ///// Standard Gamemode /////
-			clickedTime = time
-			transitionDuration = 250
-			currentTransition = ["fadeIn", "sine"]
-
-			if (clickedButton === "Standard") {
-				// menuPreset = ["Standard", descStandard, [203, 205, 209], [132, 133, 135], [71, 72, 74]]
-				menuPreset = ["Standard", descStandard, [51, 153, 255], [0, 77, 153], [0, 34, 102]]
-			} else if (clickedButton === "Chess960") {
-				menuPreset = ["Chess960", desc960, [212, 111, 17], [133, 71, 15], [71, 41, 14]]
-			} else {
-				menuPreset = ["Custom", descCustom, [50, 168, 82], [29, 84, 44], [21, 46, 28]]
-			}
-
-			backButton.style("opacity: 0; background-color: #4A4A4A; width: 0vw; left: 100vw")
-			for (let v of ["top", "middle", "bottom"]) {
-				let newText = buttons.divs[v].html()
-				buttons.divs[v].html(newText)
-				buttons.divs[v].style(`opacity: 0; background-color: ${buttons.uColour[newText]}; width: 0vw`)
-			}
-			
-			setTimeout(() => { // Fade out | part, sine //////////////////////// START MENU
-				mode = "start"
-				timeInputs["wMins"].value("10"); timeInputs["wSecs"].value("00"); timeInputs["wIncr"].value("0")
-				timeInputs["bMins"].value("10"); timeInputs["bSecs"].value("00"); timeInputs["bIncr"].value("0")
-				wPlayer = 1; bPlayer = 1
-				clickedTime = time
-				currentTransition = ["fadeOut", "cosine"]
-				
-				setTimeout(() => {
-					menuDebounce = true
-					currentTransition = [null, null]
-					backButton.style("width: 14vw; left: 85vw; opacity: 0.9; background-color: #4A4A4A")
-				}, 250)
-			}, 250)
-		} else { // In progress gamemodes
-			menuDebounce = true
-			sfx["error"].play()
-		}
-	}
-}
-
-function transition(start, duration, type, style="linear") {
-	push()
-	let col = 0
-	fill(col)
-	stroke(0, 0)
-	let t = factor(start, duration, style)
-	switch (type) {
-		////////// Transition In //////////
-		case "ribbon":
-			let slide = lerp(0, max(windowWidth, windowHeight) + min(windowWidth, windowHeight)/2, t)
-			triangle(0, 0, 0, slide, slide, 0)
-			triangle(0, windowHeight, 0, windowHeight - slide, slide, windowHeight)
-			break
-
-		case "shutter":
-			triangle(0, 0, lerp(0, windowWidth, t), 0, 0, lerp(0, windowHeight, t))
-			triangle(windowWidth, windowHeight, windowWidth, lerp(windowHeight, 0, t), lerp(windowWidth, 0, t), windowHeight)
-			push(); stroke(col)
-			if (t === 1) {line(0, windowHeight, windowWidth, 0)}
-			pop()
-			break
-
-		case "drop":
-			rect(0, 0, windowWidth, lerp(0, windowHeight, t))
-			break
-
-		case "slide":
-			rect(0, 0, lerp(0, windowWidth, t), windowHeight)
-			break
-
-		case "fadeIn":
-			push()
-			rectMode(CORNER)
-			fill(col, t*255)
-			rect(0, 0, windowWidth, windowHeight)
-			pop()
-			break
-
-		////////// Transition Out //////////
-		case "pull":
-			triangle(lerp(0, windowWidth, t), lerp(0, windowHeight, t), 0, windowHeight, windowWidth, windowHeight)
-			triangle(windowWidth, windowHeight, windowWidth, 0, lerp(0, windowWidth, t), lerp(0, windowHeight, t))
-			push()
-			stroke(col)
-			line(lerp(0, windowWidth, t), lerp(0, windowHeight, t), windowWidth, windowHeight)
-			pop()
-			break
-
-		case "fadeOut":
-			push()
-			rectMode(CORNER)
-			fill(col, (1-t)*255)
-			rect(0, 0, windowWidth, windowHeight)
-			pop()
-			break
-
-		case "lift":
-			rect(0, 0, windowWidth, lerp(windowHeight, 0, t))
-			break
-
-		case "part":
-			rect(0, 0, lerp(windowWidth/2, 0, t), windowHeight)
-			rect(windowWidth, 0, lerp(-windowWidth/2, 0, t), windowHeight)
-			break
-	} pop()
-}
-
-function factor(start, duration, style="linear") {
-	let x = min(1, (time - start) / duration)
-	switch (style) {
-		case "sine":
-			return sin(HALF_PI * x)
-
-		case "cosine":
-			return cos(HALF_PI * x + PI) + 1
-
-		case "circular":
-			return sqrt(2*x - x**2)
-
-		case "exponential":
-			return 1000 ** (x-1)
-
-		case "elastic":
-			return 1 - (x - 1)**2 * cos(7*x)
-
-		case "bounce":
-			return 1 - (x - 1)**2 * abs(cos(7*x))
-		
-		case "linear":
-			return x
-
-		default:
-			return x**style
-	}
-}
-
-function getRankandFileFromMouse(x, y) {
-	if (min(x,y) > decile && max(x,y) < 9 * decile) {
-		let rank = floor(x/decile)
-		let file = floor(y/decile)
-		if (!game.flip) {rank = 9 - rank; file = 9 - file}
-		return [rank, file]
-	}
-	return [false, false]
-}
-
-function mousePressed() {
-	[rank, file] = getRankandFileFromMouse(mouseX, mouseY)
-	if (!rank || !file) {mouseBuffer = [false, false, false]}
-	if (mode === "game") {
-		if (mouseButton === LEFT) {
-			if (windowHeight*0.05 <= mouseY && mouseY <= windowHeight*0.15) { // Utility buttons
-				if (windowWidth*0.65 <= mouseX && mouseX <= windowWidth*0.65+decile) {
-					// Restart
-					game.resetBoard()
-				} else if (windowWidth*0.7 <= mouseX && mouseX <= windowWidth*0.7+decile) {
-					// Undo
-					game.undoMove()
-				} else if (windowWidth*0.75 <= mouseX && mouseX <= windowWidth*0.75+decile) {
-					// Flip
-					game.flip = !game.flip
-				} else if (windowWidth*0.8 <= mouseX && mouseX <= windowWidth*0.8+decile) {
-					game.printMoves()
-					// Print
-				}
-			}
-			game.highlightSquares = []; game.arrowSquares = []
-			if (game.mode === "promo") { // Promotion
-				if (min(rank, file) >= 4 && max(rank, file) <= 5) {
-					let piece
-					if (rank === 4 && file === 4) {
-						piece = game.turn ? "Q" : "q"
-					} else if (rank === 5 && file === 4) {
-						piece = game.turn ? "R" : "r"
-					} else if (rank === 4 && file === 5) {
-						piece = game.turn ? "N" : "n"
-					} else if (rank === 5 && file === 5) {
-						piece = game.turn ? "B" : "b"
-					} // Add promotion check here
-					game.turn = !game.turn
-					game.bitboards[game.bitboards.length-1][piece].push([game.promoSquare[0], game.promoSquare[1]])
-					game.board[game.promoSquare[1]-1][game.promoSquare[0]-1] = piece
-					game.boardHistory[game.boardHistory.length-1][game.promoSquare[1]-1][game.promoSquare[0]-1] = piece
-					game.moveHistory[game.moveHistory.length-1] += "=" + piece.toUpperCase()
-					if (game.isCheck(...game.bitboards[game.bitboards.length-1][!game.turn ? "k" : "K"][0], game.turn, game.bitboards[game.bitboards.length-1], game.board)) {
-						game.moveHistory[game.moveHistory.length-1] += "+"
-					} game.mode = "board"
-				}
-			}
-		}
-
-		if (rank && file) {
-			if (mouseBuffer[2] === true && mouseButton === LEFT) {
-				if ((mouseBuffer[0] !== rank || mouseBuffer[1] !== file) && mouseButton === LEFT && (game.turn ? game.whitePlayer : game.blackPlayer) === "Human") {
-					let piece = game.board[mouseBuffer[1] - 1][mouseBuffer[0] - 1]
-					let move = game.handleMove(mouseBuffer[0], mouseBuffer[1], rank, file, piece, game.copyBitboard(game.bitboards[game.bitboards.length-1]), game.copyBoard(game.board), [...game.canCastle[game.canCastle.length-1]], false, true)
-					if (move) {game.updateAttributes(move)}
-				} mouseBuffer = [false, false, false]
-				
-			} else if (mouseButton !== LEFT || game.board[file-1][rank-1] !== "#") {
-				mouseBuffer = [rank, file, mouseButton]
-			} else {mouseBuffer = [false, false, false]}
-		} else {mouseBuffer = [false, false, false]}
-
-		if (decile*8 <= mouseY && mouseY <= decile*9) { // Move History Buttons
-			let buttonWidth = decile * 15.25 + (windowWidth - decile * 1.75)
-			let _buttonWidth = decile * 15.25 - (windowWidth - decile * 1.75)
-			if (buttonWidth/2 + _buttonWidth*0.7275 <= mouseX && mouseX <= buttonWidth/2 + _buttonWidth*0.3975) {
-				game.move = 0
-			} else if (buttonWidth/2 + _buttonWidth*0.3525 <= mouseX && mouseX <= buttonWidth/2 + _buttonWidth*0.0225) {
-				game.move = max(game.move-1, 0)
-			} else if (buttonWidth/2 - _buttonWidth*0.0225 <= mouseX && mouseX <= buttonWidth/2 - _buttonWidth*0.3525) {
-				game.move = min(game.move+1, game.boardHistory.length-1)
-			} else if (buttonWidth/2 - _buttonWidth*0.3975 <= mouseX && mouseX <= buttonWidth/2 - _buttonWidth*0.7275) {
-				game.move = game.boardHistory.length - 1
-			}
-		} if (rank && file) {game.move = game.boardHistory.length - 1}
-	
-	} else if (mode === "start") {
-		if (menuDebounce && windowWidth*0.4225 <= mouseX && mouseX <= windowWidth*0.6225 && decile*7.75 <= mouseY && mouseY <= decile*9.55) {
-			menuDebounce = false
-			sfx["click3"].play()
-			clickedTime = time
-			transitionDuration = 1500
-	
-			if (menuPreset[0] === "Standard") {
-				currentTransition = ["ribbon", "linear"]
-			} else if (menuPreset[0] === "Chess960") {
-				currentTransition = ["shutter", "bounce"]
-			} else { // do the tidal wave thing
-				currentTransition = ["drop", "sine"]
-			}
-	
-			backButton.style("opacity: 0; background-color: #4A4A4A; width: 0vw; left: 100vw")
-			for (let v of ["top", "middle", "bottom"]) {
-				let newText = buttons.divs[v].html()
-				buttons.divs[v].html(newText)
-				buttons.divs[v].style(`opacity: 0; background-color: ${buttons.uColour[newText]}; width: 0vw`)
-			}
-			
-			setTimeout(() => {
-				mode = "game"
-				game = new Chess(startFEN, players[wPlayer-1], players[bPlayer-1], game.timeToMs(timeInputs["wMins"].value(), timeInputs["wSecs"].value()), game.timeToMs(timeInputs["bMins"].value(), timeInputs["bSecs"].value()), timeInputs["wIncr"].value()*1000, timeInputs["bIncr"].value()*1000)
-				clickedTime = time
-				if (menuPreset[0] === "Standard") {
-					currentTransition = ["lift", "cosine"]
-				} else if (menuPreset[0] === "Chess960") {
-					currentTransition = ["part", "sine"]
-				} else { // do the tidal wave thing
-					currentTransition = ["pull", "sine"]
-				}			
-				setTimeout(() => {
-					menuDebounce = true
-					currentTransition = [null, null]
-					backButton.style("width: 14vw; left: 85vw; opacity: 0.9; background-color: #4A4A4A")
-				}, 1500)
-			}, 1750)
-		} else if (decile*4.25 <= mouseY && mouseY <= decile*5.1) { // Switch player.
-			if (windowWidth*0.065 <= mouseX && mouseX <= windowWidth*0.105) {
-				wPlayer = wPlayer === 1 ? 6 : wPlayer-1
-			} else if (windowWidth*0.25 <= mouseX && mouseX <= windowWidth*0.29) {
-				wPlayer = wPlayer === 6 ? 1 : wPlayer+1
-			} else if (windowWidth*0.405 <= mouseX && mouseX <= windowWidth*0.445) {
-				bPlayer = bPlayer === 1 ? 6 : bPlayer-1
-			} else if (windowWidth*0.595 <= mouseX && mouseX <= windowWidth*0.635) {
-				bPlayer = bPlayer === 6 ? 1 : bPlayer+1
-			}
-		}
-	}
-}
-
-function mouseReleased() {
-	[rank, file] = getRankandFileFromMouse(mouseX, mouseY)
-	if (mouseBuffer.join("") === [rank, file, RIGHT].join("") && rank && file) { // Highlight Squares
-		if (game.highlightSquares.every(arr => arr.join("") !== [rank, file].join(""))) {
-			game.highlightSquares.push([rank, file])
-		} else {
-			game.highlightSquares = game.highlightSquares.filter(v => v.join("") !== [rank, file].join(""))
-		}
-	} else if (mouseBuffer[2] === RIGHT && mouseBuffer[0] && mouseBuffer[1] && rank && file) { // Arrow Squares
-		if (game.arrowSquares.every(arr => arr.join("") !== [mouseBuffer[0]+0.5, mouseBuffer[1]+0.5, rank+0.5, file+0.5].join(""))) {
-			game.arrowSquares.push([mouseBuffer[0]+0.5, mouseBuffer[1]+0.5, rank+0.5, file+0.5])
-		} else {
-			game.arrowSquares = game.arrowSquares.filter(v => v.join("") !== [mouseBuffer[0]+0.5, mouseBuffer[1]+0.5, rank+0.5, file+0.5].join(""))
-		}
-	} else if (mouseBuffer[2] === LEFT && (mouseBuffer[0] !== rank || mouseBuffer[1] !== file)) { // Handle Move
-		let piece = game.board[mouseBuffer[1] - 1][mouseBuffer[0] - 1]
-		if (game.getColour(piece) === game.turn && piece !== "#" && (game.turn ? game.whitePlayer : game.blackPlayer) === "Human") {
-			let move = game.handleMove(mouseBuffer[0], mouseBuffer[1], rank, file, piece, game.copyBitboard(game.bitboards[game.bitboards.length-1]), game.copyBoard(game.board), [...game.canCastle[game.canCastle.length-1]], false, true)
-			if (move) {game.updateAttributes(move)}
-		}
-	} else if (mouseBuffer[2] === LEFT && (mouseBuffer[0] === rank && mouseBuffer[1] === file)) { // Possible Move
-		let piece = game.board[file - 1][rank - 1]
-		if (game.getColour(piece) === game.turn && piece !== "#") {
-			mouseBuffer[2] = true
-		}
-	}
-}
-
-function keyPressed() {
-	switch (key) {
-		case "x":
-			game.flip = !game.flip
-			break
-
-		case "r":
-			game.resetBoard()
-			break
-
-		case "u":
-			game.undoMove()	
-			break
-
-		case "p":
-			game.printMoves()
-			break
-
-		case "ArrowLeft":
-			game.move = max(game.move-1, 0)
-			break
-
-		case "ArrowRight":
-			game.move = min(game.move+1, game.boardHistory.length-1)
-			break
-
-		case "ArrowUp":
-			game.move = 0
-			break
-
-		case "ArrowDown":
-			game.move = game.boardHistory.length - 1
-			break
-	}
-}
-
 class Fortuna extends Chess {
-	constructor() {
+	constructor(fen, wPlayer="Human", bPlayer="Human", wTime=600000, bTime=600000, wIncr=0, bIncr=0) {
+		super(fen, wPlayer="Human", bPlayer="Human", wTime=600000, bTime=600000, wIncr=0, bIncr=0)
+	}
 
+	getAllLegalMoves(board) {
+		return [0, 0]
+	}
+
+	makeMove() {
+		allMoves = this.getAllLegalMoves()
+		return random(allMoves)
 	}
 }
 
-class Parallax extends Fortuna {
-	constructor() {
-		
-	}
-}
-
-class Astranaught extends Parallax {
-	constructor() {
-		
-	}
-}
-
-class Lazaward extends Astranaught {
+class Equinox extends Fortuna {
 	constructor() {
 		
 	}
 }
 
-class AlephInfinity extends Lazaward {
+class Astor extends Parallax {
+	constructor() {
+		
+	}
+}
+
+class Lazaward extends Astor {
+	constructor() {
+		
+	}
+}
+
+class Aleph extends Lazaward {
 	constructor() {
 		
 	}
