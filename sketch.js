@@ -202,6 +202,7 @@ function setup() {
 
 function draw() {
 	resizeCanvas(windowWidth, windowHeight)
+
 	clear()
 	time = new Date().getTime()
 	decile = min(windowWidth, windowHeight) / 10
@@ -758,7 +759,7 @@ function mousePressed() {
 						piece = game.turn ? "N" : "n"
 					} else if (rank === 5 && file === 5) {
 						piece = game.turn ? "B" : "b"
-					} // Add promotion check here
+					}
 					game.turn = !game.turn
 					game.bitboards[game.bitboards.length-1][piece].push([game.promoSquare[0], game.promoSquare[1]])
 					game.board[game.promoSquare[1]-1][game.promoSquare[0]-1] = piece
@@ -767,6 +768,11 @@ function mousePressed() {
 					if (game.isCheck(...game.bitboards[game.bitboards.length-1][!game.turn ? "k" : "K"][0], game.turn, game.bitboards[game.bitboards.length-1], game.board)) {
 						game.moveHistory[game.moveHistory.length-1] += "+"
 					} game.mode = "board"
+
+					if ((game.turn ? game.whitePlayer : game.blackPlayer) !== "Human") {
+						let botMove = new Fortuna(game.copyBoard(game.board), game.copyBitboard(game.bitboards[game.bitboards.length-1]), [...game.canCastle[game.canCastle.length-1]], game.passantHistory[game.passantHistory.length-1], game.turn).makeMove()
+						game.updateAttributes(game.handleMove(...botMove, game.board[botMove[1]-1][botMove[0]-1], game.copyBitboard(game.bitboards[game.bitboards.length-1]), game.copyBoard(game.board), [...game.canCastle[game.canCastle.length-1]]))
+					}
 				}
 			}
 		}
@@ -949,6 +955,11 @@ class Chess { // Main Section of Code
 		this.turn = true
 		this.flip = true
 		this.move = 0
+
+		if (wPlayer !== "Human") {
+			let botMove = new Fortuna(this.copyBoard(this.board), this.copyBitboard(this.bitboards[this.bitboards.length-1]), [...this.canCastle[this.canCastle.length-1]], this.passantHistory[this.passantHistory.length-1], this.turn).makeMove()
+			this.updateAttributes(this.handleMove(...botMove, this.board[botMove[1]-1][botMove[0]-1], this.copyBitboard(this.bitboards[this.bitboards.length-1]), this.copyBoard(this.board), [...this.canCastle[this.canCastle.length-1]], false, this.turn ? "Q" : "q"))	
+		}
 	}
 
 	initiateBoard(fen) {
@@ -1019,7 +1030,7 @@ class Chess { // Main Section of Code
 	////////// Front End - User Interface //////////
 
 	draw() { // Where it all happens...
-		//this.highlightSquares = this.bitboards[this.bitboards.length-1]["P"]
+		// this.highlightSquares = this.bitboards[this.bitboards.length-1]["q"]
 		if (this.turn) {this.whiteTime = max(this.whiteTime - (time - this.moveTime), 0)}
 		else {this.blackTime = max(this.blackTime - (time - this.moveTime), 0)}
 		this.moveTime = time // Timer Stuff
@@ -1098,7 +1109,7 @@ class Chess { // Main Section of Code
 		// imageMode(CENTER)
 		// image(pieces["q"], 11.4*decile, 7.25*decile, decile*1.25, decile*1.25)
 		// pop()
-	}
+	} // Finish later innit
 
 	drawUtility() {
 		push()
@@ -1282,6 +1293,11 @@ class Chess { // Main Section of Code
 		this.blackTimeHistory.push(this.blackTime)
 		this.move = this.boardHistory.length - 1
 		this.turn = !this.turn
+
+		if ((this.turn ? this.whitePlayer : this.blackPlayer) !== "Human" && this.move !== 100) {
+			let botMove = new Fortuna(this.copyBoard(move[0]), this.copyBitboard(move[2]), [...move[1]], move[4], this.turn).makeMove()
+			this.updateAttributes(this.handleMove(...botMove, move[0][botMove[1]-1][botMove[0]-1], this.copyBitboard(move[2]), this.copyBoard(move[0]), [...move[1]], false, this.turn ? "Q" : "q"))
+		}
 	}
 
 	showLegalMoves() {
@@ -1436,7 +1452,7 @@ class Chess { // Main Section of Code
 		} return legalMoves
 	}
 
-	handleMove(x1, y1, x2, y2, piece, locator, activeBoard, castleArr, query=false, findNotation=false) {
+	handleMove(x1, y1, x2, y2, piece, locator, activeBoard, castleArr, query=false, botPromo=false) {
 		let moves = query ? [[x2, y2]] : this.getLegalMoves(x1, y1)
 		let colour = this.getColour(piece)
 		let notation = piece.toUpperCase() === "P" ? "" : piece.toUpperCase()
@@ -1490,11 +1506,20 @@ class Chess { // Main Section of Code
 			activeBoard[y1-1][x1-1] = "#"
 			if (piece.toUpperCase() === "P") { // Pawn Special Cases
 				if (y2 === (colour ? 1 : 8)) { // Promotion
-					if (!query) {
+					locator[piece] = locator[piece].filter(v => v[0] !== x2 || v[1] !== y2)
+					if (!query && !botPromo) {
 						this.mode = "promo"
 						this.turn = !this.turn
 						this.promoSquare = [x2, y2]
-						locator[piece] = locator[piece].filter(v => v[0] !== x2 || v[1] !== y2)
+					} else if (botPromo) { // Bot Promo
+						locator[botPromo].push([x2, y2])
+						activeBoard[y1-1][x1-1] = "#"
+						activeBoard[y2-1][x2-1] = botPromo
+						notation += this.getNotation(x2, y2) + "=" + botPromo.toUpperCase()
+
+						if (this.isCheck(...locator[this.turn ? "k" : "K"][0], !this.turn, locator, this.board)) {
+							notation += "+"; if (!query) {sfx["check"].play()}
+						} return [activeBoard, castleArr, locator, notation, passantSquare]
 					}
 				} else if (abs(x2-x1) === 1 && capturedPiece === "#") { // En Passant
 					notation += "x"
@@ -1619,17 +1644,33 @@ class Chess { // Main Section of Code
 }
 
 class Fortuna extends Chess {
-	constructor(fen, wPlayer="Human", bPlayer="Human", wTime=600000, bTime=600000, wIncr=0, bIncr=0) {
-		super(fen, wPlayer="Human", bPlayer="Human", wTime=600000, bTime=600000, wIncr=0, bIncr=0)
+	constructor(_board, _bitboards, _canCastle, _passantHistory, _turn) {
+		super(startFEN)
+		this.board = _board
+		this.boardHistory = [_board]
+		this.bitboards = [_bitboards]
+		this.canCastle = _canCastle
+		this.passantHistory = [_passantHistory]
+		this.turn = _turn
+		this.move = 0
 	}
 
-	getAllLegalMoves(board) {
-		return [0, 0]
+	getAllLegalMoves() { // FUCKING FIX PROMOTION YOU DUMBASS BASTARD (on both sides) & MOVES
+		let pieces = ["P", "N", "B", "R", "Q", "K"]
+		if (!this.turn) {pieces = pieces.map(v => v.toLowerCase())}
+		let moves = []// this.getLegalMoves(...this.bitboards[this.bitboards.length-1]["p"][0])
+
+		for (let p of pieces) {
+			for (let [x1, y1] of this.bitboards[this.bitboards.length-1][p]) {
+				for (let [x2, y2] of this.getLegalMoves(x1, y1)) {
+					moves.push([x1, y1, x2, y2])
+				}
+			}
+		} return moves
 	}
 
 	makeMove() {
-		allMoves = this.getAllLegalMoves()
-		return random(allMoves)
+		return random(this.getAllLegalMoves())
 	}
 }
 
@@ -1639,7 +1680,7 @@ class Equinox extends Fortuna {
 	}
 }
 
-class Astor extends Parallax {
+class Astor extends Equinox {
 	constructor() {
 		
 	}
