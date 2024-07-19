@@ -4,7 +4,6 @@ const desc960 = "Chess, but the starting position is random. Play with a friend,
 const descCustom = "Chess, but you set up the starting position. Play with a friend, or one of the bots!\n\nBefore starting, you can choose who plays as white and black. You must also choose time controls for both players."
 
 let startFEN = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR"
-let randomFEN = "bbrknnqr/pppppppp/8/8/8/8/PPPPPPPP/BBRKNNQR"
 let newFEN = "rn1qkb1r/pp2pppp/2p2n2/5b2/P1pP3N/2N5/1P2PPPP/R1BQKB1R"
 
 let backTime = 0, backStartTime = 0
@@ -438,6 +437,25 @@ function drawMenu(title, desc, colour1, colour2, colour3) {
 	pop()
 }
 
+function generate960() {
+	let arr960 = Array(8).fill("N")
+	let arrNums = Array.from({length: 8}, (_, i)=> i)
+	let kingPos = floor(random(1, 7))
+	let lRook = floor(random(0, kingPos)), rRook = floor(random(kingPos+1, 8))
+	arr960[kingPos] = "K"
+	arr960[lRook] = "R"
+	arr960[rRook] = "R"
+	arrNums = arrNums.filter(v => ![kingPos, lRook, rRook].includes(v))
+	let lBishop = random(arrNums)
+	let rBishop = random(arrNums.filter(v => v % 2 !== (lBishop % 2 === 0 ? 0 : 1)))
+	arr960[lBishop] = "B"
+	arr960[rBishop] = "B"
+	arrNums = arrNums.filter(v => ![lBishop, rBishop].includes(v))
+	arr960[random(arrNums)] = "Q"
+
+	return arr960.join("")
+}
+
 function mouseHover() {
 	if (menuDebounce) {
 		if (this.html() === "Back" && backDebounce) {
@@ -728,9 +746,10 @@ function getRankandFileFromMouse(x, y) {
 }
 
 function mousePressed() {
-	[rank, file] = getRankandFileFromMouse(mouseX, mouseY)
+	let [rank, file] = getRankandFileFromMouse(mouseX, mouseY)
 	if (!rank || !file) {mouseBuffer = [false, false, false]}
 	if (mode === "game") {
+		if (game.status !== "active" && rank === 7 && file === 3) {game.status = "finish"; console.log("hi")}
 		if (mouseButton === LEFT) {
 			if (windowHeight*0.05 <= mouseY && mouseY <= windowHeight*0.15) { // Utility buttons
 				if (windowWidth*0.65 <= mouseX && mouseX <= windowWidth*0.65+decile) {
@@ -815,7 +834,7 @@ function mousePressed() {
 				currentTransition = ["ribbon", "linear"]
 			} else if (menuPreset[0] === "Chess960") {
 				currentTransition = ["shutter", "bounce"]
-			} else { // do the tidal wave thing
+			} else {
 				currentTransition = ["slide", "sine"]
 			}
 	
@@ -838,13 +857,18 @@ function mousePressed() {
 					}
 				}
 
-				game = new Chess(startFEN, players[wPlayer-1], players[bPlayer-1], game.timeToMs(timeInputs["wMins"].value(), timeInputs["wSecs"].value()), game.timeToMs(timeInputs["bMins"].value(), timeInputs["bSecs"].value()), timeInputs["wIncr"].value()*1000, timeInputs["bIncr"].value()*1000)
 				clickedTime = time
+				startFEN = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR"
 				if (menuPreset[0] === "Standard") {
+					game = new Chess(startFEN, players[wPlayer-1], players[bPlayer-1], game.timeToMs(timeInputs["wMins"].value(), timeInputs["wSecs"].value()), game.timeToMs(timeInputs["bMins"].value(), timeInputs["bSecs"].value()), timeInputs["wIncr"].value()*1000, timeInputs["bIncr"].value()*1000)
 					currentTransition = ["lift", "cosine"]
 				} else if (menuPreset[0] === "Chess960") {
+					let startPos = generate960()
+					startFEN = `${startPos.toLowerCase()}/pppppppp/8/8/8/8/PPPPPPPP/${startPos}`
+					game = new Chess(startFEN, players[wPlayer-1], players[bPlayer-1], game.timeToMs(timeInputs["wMins"].value(), timeInputs["wSecs"].value()), game.timeToMs(timeInputs["bMins"].value(), timeInputs["bSecs"].value()), timeInputs["wIncr"].value()*1000, timeInputs["bIncr"].value()*1000)
 					currentTransition = ["part", "sine"]
-				} else { // do the tidal wave thing
+				} else {
+					game = new Chess(startFEN, players[wPlayer-1], players[bPlayer-1], game.timeToMs(timeInputs["wMins"].value(), timeInputs["wSecs"].value()), game.timeToMs(timeInputs["bMins"].value(), timeInputs["bSecs"].value()), timeInputs["wIncr"].value()*1000, timeInputs["bIncr"].value()*1000)
 					currentTransition = ["pull", "sine"]
 				}			
 				setTimeout(() => {
@@ -905,12 +929,12 @@ function keyPressed() {
 			game.resetBoard()
 			break
 
-		case "u":
-			game.undoMove()	
+		case "z":
+			if (keyIsDown(CONTROL)) {game.undoMove()}
 			break
 
-		case "p":
-			game.printMoves()
+		case "c":
+			if (keyIsDown(CONTROL)) {game.printMoves()}
 			break
 
 		case "ArrowLeft":
@@ -942,8 +966,8 @@ class Chess { // Main Section of Code
 		this.highlightSquares = []
 		this.arrowSquares = []
 		this.moveHistory = []
-		this.whiteTimeHistory = []
-		this.blackTimeHistory = []
+		this.whiteTimeHistory = [wTime]
+		this.blackTimeHistory = [wTime]
 		this.whiteTime = wTime
 		this.blackTime = bTime
 		this.whiteIncrement = wIncr
@@ -955,6 +979,9 @@ class Chess { // Main Section of Code
 		this.turn = true
 		this.flip = true
 		this.move = 0
+		this.status = "active"
+		this.threeFold = []
+		this.lastCapture = [0]
 
 		if (wPlayer !== "Human") {
 			let botMove = new Fortuna(this.copyBoard(this.board), this.copyBitboard(this.bitboards[this.bitboards.length-1]), [...this.canCastle[this.canCastle.length-1]], this.passantHistory[this.passantHistory.length-1], this.turn).makeMove()
@@ -1002,6 +1029,8 @@ class Chess { // Main Section of Code
 
 	getColour(piece) {return piece === piece.toUpperCase()}
 
+	convertThreefold(board) {return board.map(v => v.toString()).toString()}
+
 	copyBoard(board) {
 		let copy = []
 		for (let v of board) {
@@ -1031,9 +1060,17 @@ class Chess { // Main Section of Code
 
 	draw() { // Where it all happens...
 		// this.highlightSquares = this.bitboards[this.bitboards.length-1]["q"]
-		if (this.turn) {this.whiteTime = max(this.whiteTime - (time - this.moveTime), 0)}
-		else {this.blackTime = max(this.blackTime - (time - this.moveTime), 0)}
-		this.moveTime = time // Timer Stuff
+		if (this.status === "active") {
+			if (this.turn) {this.whiteTime = max(this.whiteTime - (time - this.moveTime), 0)}
+			else {this.blackTime = max(this.blackTime - (time - this.moveTime), 0)}
+			if ((this.turn ? this.whiteTime : this.blackTime) === 0) {
+				if (this.materialCheck(this.getMatList()[this.turn ? 1 : 0])) {
+					this.status = ["Game drawn: Timeout vs Insufficient Material", "Draw"]
+				} else {
+					this.status = ["Game won by Timeout", !this.turn]
+				}
+			}
+		} this.moveTime = time
 
 		push()
 		stroke(0, 0)
@@ -1050,6 +1087,64 @@ class Chess { // Main Section of Code
 		this.drawPieceDeficit()
 		if ((windowWidth/windowHeight) >= 1.85) {this.drawNotation()}
 		if (this.mode === "promo") {this.promotionUI()}
+		if (!["active", "finish"].includes(this.status)) {this.drawEndScreen()}
+		pop()
+	}
+
+	drawEndScreen() {
+		push()
+		rectMode(CENTER)
+		textAlign(CENTER, CENTER)
+
+		stroke(25)
+		strokeWeight(4)
+		rect(decile*5, decile*5, decile*6, decile*4, decile/2)
+		strokeWeight(0)
+
+		fill(150, 100, 215)
+		rect(decile*5, decile*5, decile*6, decile*4, decile/2)
+		fill(100)
+		rect(decile*5, decile*5, decile*6, decile*2)
+
+		strokeWeight(5)
+		fill(255)
+		stroke(...(this.status[1] === "Draw" ? [150] : (this.status[1] ? [59, 162, 17] : [228, 8, 10])))
+		rect(decile*3, decile*5, decile, decile, decile/10)
+		fill(0)
+		stroke(...(this.status[1] === "Draw" ? [150] : (!this.status[1] ? [59, 162, 17] : [228, 8, 10])))
+		rect(decile*7, decile*5, decile, decile, decile/10)
+		strokeWeight(0)
+
+		push()
+		fill(225, 50, 60)
+		stroke(0)
+		strokeWeight(1)
+		textFont("Arial")
+		textSize(decile)
+		text("×", decile*7.5, decile*3.6)
+		pop()
+		textSize(decile/2)
+
+		text((this.status[1] === "Draw" ? "Game Drawn" : (this.status[1] ? "White Wins" : "Black Wins")), decile*5, decile*3.5)
+		textSize(decile/4)
+		text(this.status[0], decile*5, decile*6.5, decile*6)
+
+		stroke(0)
+		strokeWeight(1)
+		fill(255)
+
+		push()
+		textSize(decile/3)
+		rotate(HALF_PI)
+		text(this.blackPlayer.toUpperCase(), decile*5, -decile*6)
+		rotate(PI)
+		text(this.whitePlayer.toUpperCase(), -decile*5, decile*4)
+		pop()
+
+		textSize(decile)
+		strokeWeight(2)
+		fill(100)
+		text((this.status[1] === "Draw" ? "=" : (this.status[1] ? "/" : "\\")), decile*5, decile*4.8)
 		pop()
 	}
 
@@ -1288,15 +1383,65 @@ class Chess { // Main Section of Code
 		this.canCastle.push(move[1])
 		this.bitboards.push(move[2])
 		this.moveHistory.push(move[3])
+		this.threeFold.push(this.convertThreefold(move[0]))
 		this.passantHistory.push(move[4])
 		this.whiteTimeHistory.push(this.whiteTime)
 		this.blackTimeHistory.push(this.blackTime)
 		this.move = this.boardHistory.length - 1
 		this.turn = !this.turn
+		this.lastCapture.push(move[3].includes("x") || move[3].slice(0, 1) === move[3].slice(0, 1).toLowerCase() ? this.move : this.lastCapture[this.lastCapture.length-1])
 
-		if ((this.turn ? this.whitePlayer : this.blackPlayer) !== "Human" && this.move !== 100) {
+		this.updateStatus()
+
+		if (this.status === "active" && (this.turn ? this.whitePlayer : this.blackPlayer) !== "Human") {
 			let botMove = new Fortuna(this.copyBoard(move[0]), this.copyBitboard(move[2]), [...move[1]], move[4], this.turn).makeMove()
 			this.updateAttributes(this.handleMove(...botMove, move[0][botMove[1]-1][botMove[0]-1], this.copyBitboard(move[2]), this.copyBoard(move[0]), [...move[1]], false, this.turn ? "Q" : "q"))
+		}
+	}
+
+	getMaterial(bitboard) {
+		let mats = []
+		for (let v in bitboard) {
+			mats[v] = bitboard[v].length
+		} return mats
+	}
+
+	materialCheck(matList) {
+		return matList.length === 0 || (matList.length === 1 && (matList[0] === "N" || matList[0] === "B"))
+	}
+
+	getMatList() {
+		let mats = this.getMaterial(this.copyBitboard(this.bitboards[this.bitboards.length-1]))
+		let wPieces = [], bPieces = []
+
+		for (let v in mats) {
+			for (let _ = 0; _ < mats[v]; _++) {
+				if (v.toUpperCase() !== "K") {
+					if (v.toUpperCase() === v) {
+						wPieces.push(v.toUpperCase())
+					} else {
+						bPieces.push(v.toUpperCase())
+					}
+				}
+			}
+		} return [wPieces, bPieces]
+	}
+
+	updateStatus() {
+		let mats = this.getMatList()
+		if (!this.getAllLegalMoves().length) {
+			if (this.moveHistory[this.moveHistory.length-1].slice(-1) === "+") {
+				this.status = ["Game won by Checkmate", !this.turn]
+				this.moveHistory[this.moveHistory.length-1] = this.moveHistory[this.moveHistory.length-1].slice(0, -1) + "#"
+			} else {
+				this.status = ["Game drawn by Stalemate", "Draw"]
+			}
+		} else if (this.threeFold.filter((v, i) => i % 2 === (!this.turn ? 0 : 1) && v === this.threeFold[this.threeFold.length-1]).length === 3) { // Threefold
+			this.status = ["Game drawn by Threefold Repetition", "Draw"]
+		} else if (this.move - this.lastCapture[this.lastCapture.length-1] === 100) {
+			this.status = ["Game drawn by 50-Move Rule", "Draw"]
+		} else if (this.materialCheck(mats[0]) && this.materialCheck(mats[1])) {
+			this.status = ["Game drawn by Insufficient Material", "Draw"]
 		}
 	}
 
@@ -1312,6 +1457,20 @@ class Chess { // Main Section of Code
 				} pop()
 			}
 		}
+	}
+
+	getAllLegalMoves() {
+		let pieces = ["P", "N", "B", "R", "Q", "K"]
+		if (!this.turn) {pieces = pieces.map(v => v.toLowerCase())}
+		let moves = []
+
+		for (let p of pieces) {
+			for (let [x1, y1] of this.bitboards[this.bitboards.length-1][p]) {
+				for (let [x2, y2] of this.getLegalMoves(x1, y1)) {
+					moves.push([x1, y1, x2, y2])
+				}
+			}
+		} return moves
 	}
 
 	getHorizontalMoves(x1, y1) {
@@ -1450,7 +1609,7 @@ class Chess { // Main Section of Code
 				legalMoves.push([v[0], v[1]])
 			}
 		} return legalMoves
-	}
+	} // FIX CHESS960 HERE <--------------------------------------!!!!!!!
 
 	handleMove(x1, y1, x2, y2, piece, locator, activeBoard, castleArr, query=false, botPromo=false) {
 		let moves = query ? [[x2, y2]] : this.getLegalMoves(x1, y1)
@@ -1565,7 +1724,7 @@ class Chess { // Main Section of Code
 				notation += "+"; if (!query) {sfx["check"].play()}
 			} return [activeBoard, castleArr, locator, notation, passantSquare]
 		} return false
-	}
+	} // FIX CHESS960 HERE <--------------------------------------!!!!!!!
 
 	isCheck(x1, y1, colour, locator, activeBoard) {
 		let opposingKing = locator[colour ? "k" : "K"][0]
@@ -1622,6 +1781,9 @@ class Chess { // Main Section of Code
 			this.passantHistory.pop()
 			this.whiteTimeHistory.pop()
 			this.blackTimeHistory.pop()
+			this.threeFold.pop()
+			this.lastCapture.pop()
+			this.status = "active"
 			this.move = this.boardHistory.length-1
 			this.whiteTime = this.whiteTimeHistory[this.whiteTimeHistory.length-1]
 			this.blackTime = this.blackTimeHistory[this.blackTimeHistory.length-1]
@@ -1636,7 +1798,7 @@ class Chess { // Main Section of Code
 			moveList.push(`${Math.floor(i/2)+1}. ${this.moveHistory.slice(i, i + 2).join(" ")}`)
 		}
 		document.body.appendChild(moves)
-		moves.value = moveList.join("     ")
+		moves.value = moveList.join(" ")
 		moves.select()
 		document.execCommand("copy")
 		moves.remove()
@@ -1655,46 +1817,47 @@ class Fortuna extends Chess {
 		this.move = 0
 	}
 
-	getAllLegalMoves() { // FUCKING FIX PROMOTION YOU DUMBASS BASTARD (on both sides) & MOVES
-		let pieces = ["P", "N", "B", "R", "Q", "K"]
-		if (!this.turn) {pieces = pieces.map(v => v.toLowerCase())}
-		let moves = []// this.getLegalMoves(...this.bitboards[this.bitboards.length-1]["p"][0])
-
-		for (let p of pieces) {
-			for (let [x1, y1] of this.bitboards[this.bitboards.length-1][p]) {
-				for (let [x2, y2] of this.getLegalMoves(x1, y1)) {
-					moves.push([x1, y1, x2, y2])
-				}
-			}
-		} return moves
-	}
-
 	makeMove() {
 		return random(this.getAllLegalMoves())
 	}
 }
 
 class Equinox extends Fortuna {
-	constructor() {
-		
+	constructor(_board, _bitboards, _canCastle, _passantHistory, _turn) {
+		super(_board, _bitboards, _canCastle, _passantHistory, _turn)
+	}
+
+	makeMove() {
+
 	}
 }
 
 class Astor extends Equinox {
-	constructor() {
+	constructor(_board, _bitboards, _canCastle, _passantHistory, _turn) {
+		super(_board, _bitboards, _canCastle, _passantHistory, _turn)
+	}
+
+	makeMove() {
 		
 	}
 }
 
 class Lazaward extends Astor {
-	constructor() {
+	constructor(_board, _bitboards, _canCastle, _passantHistory, _turn) {
+		super(_board, _bitboards, _canCastle, _passantHistory, _turn)
+	}
+
+	makeMove() {
 		
 	}
 }
 
 class Aleph extends Lazaward {
-	constructor() {
+	constructor(_board, _bitboards, _canCastle, _passantHistory, _turn) {
+		super(_board, _bitboards, _canCastle, _passantHistory, _turn)
+	}
+
+	makeMove() {
 		
 	}
 }
-
