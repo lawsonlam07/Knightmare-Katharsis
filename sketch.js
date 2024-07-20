@@ -749,7 +749,7 @@ function mousePressed() {
 	let [rank, file] = getRankandFileFromMouse(mouseX, mouseY)
 	if (!rank || !file) {mouseBuffer = [false, false, false]}
 	if (mode === "game") {
-		if (game.status !== "active" && rank === 7 && file === 3) {game.status = "finish"; console.log("hi")}
+		if (game.status !== "active" && rank === 7 && file === 3) {game.status = "finish"}
 		if (mouseButton === LEFT) {
 			if (windowHeight*0.05 <= mouseY && mouseY <= windowHeight*0.15) { // Utility buttons
 				if (windowWidth*0.65 <= mouseX && mouseX <= windowWidth*0.65+decile) {
@@ -779,14 +779,9 @@ function mousePressed() {
 					} else if (rank === 5 && file === 5) {
 						piece = game.turn ? "B" : "b"
 					}
-					game.turn = !game.turn
-					game.bitboards[game.bitboards.length-1][piece].push([game.promoSquare[0], game.promoSquare[1]])
-					game.board[game.promoSquare[1]-1][game.promoSquare[0]-1] = piece
-					game.boardHistory[game.boardHistory.length-1][game.promoSquare[1]-1][game.promoSquare[0]-1] = piece
-					game.moveHistory[game.moveHistory.length-1] += "=" + piece.toUpperCase()
-					if (game.isCheck(...game.bitboards[game.bitboards.length-1][!game.turn ? "k" : "K"][0], game.turn, game.bitboards[game.bitboards.length-1], game.board)) {
-						game.moveHistory[game.moveHistory.length-1] += "+"
-					} game.mode = "board"
+
+					game.mode = "board"
+					game.updateAttributes(game.handleMove(...game.promoSquare, game.turn ? "P" : "p", game.copyBitboard(game.bitboards[game.bitboards.length-1]), game.copyBoard(game.board), [...game.canCastle[game.canCastle.length-1]], false, piece))
 
 					if ((game.turn ? game.whitePlayer : game.blackPlayer) !== "Human") {
 						let botMove = new Fortuna(game.copyBoard(game.board), game.copyBitboard(game.bitboards[game.bitboards.length-1]), [...game.canCastle[game.canCastle.length-1]], game.passantHistory[game.passantHistory.length-1], game.turn).makeMove()
@@ -801,7 +796,7 @@ function mousePressed() {
 				if ((mouseBuffer[0] !== rank || mouseBuffer[1] !== file) && mouseButton === LEFT && (game.turn ? game.whitePlayer : game.blackPlayer) === "Human") {
 					let piece = game.board[mouseBuffer[1] - 1][mouseBuffer[0] - 1]
 					let move = game.handleMove(mouseBuffer[0], mouseBuffer[1], rank, file, piece, game.copyBitboard(game.bitboards[game.bitboards.length-1]), game.copyBoard(game.board), [...game.canCastle[game.canCastle.length-1]])
-					if (move) {game.updateAttributes(move)}
+					if (move && game.mode !== "promo") {game.updateAttributes(move)}
 				} mouseBuffer = [false, false, false]
 				
 			} else if (mouseButton !== LEFT || game.board[file-1][rank-1] !== "#") {
@@ -909,7 +904,7 @@ function mouseReleased() {
 		let piece = game.board[mouseBuffer[1] - 1][mouseBuffer[0] - 1]
 		if (game.getColour(piece) === game.turn && piece !== "#" && (game.turn ? game.whitePlayer : game.blackPlayer) === "Human") {
 			let move = game.handleMove(mouseBuffer[0], mouseBuffer[1], rank, file, piece, game.copyBitboard(game.bitboards[game.bitboards.length-1]), game.copyBoard(game.board), [...game.canCastle[game.canCastle.length-1]])
-			if (move) {game.updateAttributes(move)}
+			if (move && game.mode !== "promo") {game.updateAttributes(move)}
 		} mouseBuffer = [false, false, false]
 	} else if (mouseBuffer[2] === LEFT && (mouseBuffer[0] === rank && mouseBuffer[1] === file)) { // Possible Move
 		let piece = game.board[file - 1][rank - 1]
@@ -960,7 +955,7 @@ class Chess { // Main Section of Code
 		this.boardHistory = [this.initiateBoard(fen)]
 		this.bitboards = [this.getBitboards(fen)]
 		this.board = this.initiateBoard(fen)
-		this.promoSquare = [false, false]
+		this.promoSquare = [false, false, false, false]
 		this.canCastle = [[true, true, true, true]]
 		this.passantHistory = [[false, false]]
 		this.highlightSquares = []
@@ -982,11 +977,7 @@ class Chess { // Main Section of Code
 		this.status = "active"
 		this.threeFold = []
 		this.lastCapture = [0]
-
-		if (wPlayer !== "Human") {
-			let botMove = new Fortuna(this.copyBoard(this.board), this.copyBitboard(this.bitboards[this.bitboards.length-1]), [...this.canCastle[this.canCastle.length-1]], this.passantHistory[this.passantHistory.length-1], this.turn).makeMove()
-			this.updateAttributes(this.handleMove(...botMove, this.board[botMove[1]-1][botMove[0]-1], this.copyBitboard(this.bitboards[this.bitboards.length-1]), this.copyBoard(this.board), [...this.canCastle[this.canCastle.length-1]], false, this.turn ? "Q" : "q"))	
-		}
+		this.start = true
 	}
 
 	initiateBoard(fen) {
@@ -1058,7 +1049,7 @@ class Chess { // Main Section of Code
 
 	////////// Front End - User Interface //////////
 
-	draw() { // Where it all happens...
+	async draw() { // Where it all happens...
 		// this.highlightSquares = this.bitboards[this.bitboards.length-1]["q"]
 		if (this.status === "active") {
 			if (this.turn) {this.whiteTime = max(this.whiteTime - (time - this.moveTime), 0)}
@@ -1071,6 +1062,12 @@ class Chess { // Main Section of Code
 				}
 			}
 		} this.moveTime = time
+
+		if (this.whitePlayer !== "Human" && this.start) {
+			this.start = false
+			let botMove = await new Fortuna(this.copyBoard(this.board), this.copyBitboard(this.bitboards[this.bitboards.length-1]), [...this.canCastle[this.canCastle.length-1]], this.passantHistory[this.passantHistory.length-1], this.turn).makeMove()
+			this.updateAttributes(this.handleMove(...botMove, this.board[botMove[1]-1][botMove[0]-1], this.copyBitboard(this.bitboards[this.bitboards.length-1]), this.copyBoard(this.board), [...this.canCastle[this.canCastle.length-1]], false, this.turn ? "Q" : "q"))	
+		}
 
 		push()
 		stroke(0, 0)
@@ -1376,7 +1373,7 @@ class Chess { // Main Section of Code
 
 	////////// Back End - Move Validation //////////
 
-	updateAttributes(move) {
+	async updateAttributes(move) {
 		if (this.turn) {this.whiteTime += this.whiteIncrement} else {this.blackTime += this.blackIncrement}
 		this.board = move[0]
 		this.boardHistory.push(move[0])
@@ -1393,8 +1390,8 @@ class Chess { // Main Section of Code
 
 		this.updateStatus()
 
-		if (this.status === "active" && (this.turn ? this.whitePlayer : this.blackPlayer) !== "Human") {
-			let botMove = new Fortuna(this.copyBoard(move[0]), this.copyBitboard(move[2]), [...move[1]], move[4], this.turn).makeMove()
+		if (this.status === "active" && (this.turn ? this.whitePlayer : this.blackPlayer) !== "Human" && this.mode !== "promo") {
+			let botMove = await new Fortuna(this.copyBoard(move[0]), this.copyBitboard(move[2]), [...move[1]], move[4], this.turn).makeMove()
 			this.updateAttributes(this.handleMove(...botMove, move[0][botMove[1]-1][botMove[0]-1], this.copyBitboard(move[2]), this.copyBoard(move[0]), [...move[1]], false, this.turn ? "Q" : "q"))
 		}
 	}
@@ -1611,7 +1608,7 @@ class Chess { // Main Section of Code
 		} return legalMoves
 	} // FIX CHESS960 HERE <--------------------------------------!!!!!!!
 
-	handleMove(x1, y1, x2, y2, piece, locator, activeBoard, castleArr, query=false, botPromo=false) {
+	handleMove(x1, y1, x2, y2, piece, locator, activeBoard, castleArr, query=false, promo=false) {
 		let moves = query ? [[x2, y2]] : this.getLegalMoves(x1, y1)
 		let colour = this.getColour(piece)
 		let notation = piece.toUpperCase() === "P" ? "" : piece.toUpperCase()
@@ -1666,15 +1663,16 @@ class Chess { // Main Section of Code
 			if (piece.toUpperCase() === "P") { // Pawn Special Cases
 				if (y2 === (colour ? 1 : 8)) { // Promotion
 					locator[piece] = locator[piece].filter(v => v[0] !== x2 || v[1] !== y2)
-					if (!query && !botPromo) {
+					if (!query && !promo) {
 						this.mode = "promo"
-						this.turn = !this.turn
-						this.promoSquare = [x2, y2]
-					} else if (botPromo) { // Bot Promo
-						locator[botPromo].push([x2, y2])
 						activeBoard[y1-1][x1-1] = "#"
-						activeBoard[y2-1][x2-1] = botPromo
-						notation += this.getNotation(x2, y2) + "=" + botPromo.toUpperCase()
+						activeBoard[y2-1][x2-1] = piece
+						this.promoSquare = [x1, y1, x2, y2]
+					} else if (promo) { // Bot Promo
+						locator[promo].push([x2, y2])
+						activeBoard[y1-1][x1-1] = "#"
+						activeBoard[y2-1][x2-1] = promo
+						notation += this.getNotation(x2, y2) + "=" + promo.toUpperCase()
 
 						if (this.isCheck(...locator[this.turn ? "k" : "K"][0], !this.turn, locator, this.board)) {
 							notation += "+"; if (!query) {sfx["check"].play()}
@@ -1720,6 +1718,7 @@ class Chess { // Main Section of Code
 			} else if ((x1 === 8 && y1 === 8) || (x2 === 8 && y2 === 8)) {
 				castleArr[1] = false
 			}
+
 			if (this.isCheck(...locator[this.turn ? "k" : "K"][0], !this.turn, locator, this.board)) {
 				notation += "+"; if (!query) {sfx["check"].play()}
 			} return [activeBoard, castleArr, locator, notation, passantSquare]
@@ -1818,7 +1817,11 @@ class Fortuna extends Chess {
 	}
 
 	makeMove() {
-		return random(this.getAllLegalMoves())
+		return new Promise((resolve) => {
+			setTimeout(() => {
+				resolve(random(this.getAllLegalMoves()))
+			}, 300)
+		})
 	}
 }
 
@@ -1828,7 +1831,9 @@ class Equinox extends Fortuna {
 	}
 
 	makeMove() {
-
+		return new Promise((resolve) => {
+			resolve(null)
+		})
 	}
 }
 
@@ -1838,7 +1843,9 @@ class Astor extends Equinox {
 	}
 
 	makeMove() {
-		
+		return new Promise((resolve) => {
+			resolve(null)
+		})
 	}
 }
 
@@ -1848,7 +1855,9 @@ class Lazaward extends Astor {
 	}
 
 	makeMove() {
-		
+		return new Promise((resolve) => {
+			resolve(null)
+		})
 	}
 }
 
@@ -1858,6 +1867,8 @@ class Aleph extends Lazaward {
 	}
 
 	makeMove() {
-		
+		return new Promise((resolve) => {
+			resolve(null)
+		})
 	}
 }
