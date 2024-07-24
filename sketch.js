@@ -9,6 +9,7 @@ let newFEN = "rn1qkb1r/pp2pppp/2p2n2/5b2/P1pP3N/2N5/1P2PPPP/R1BQKB1R"
 let backTime = 0, backStartTime = 0
 let clickedTime = 0
 let transitionDuration = 500
+let promiseDB = true
 let currentTransition = [null, null]
 let mouseBuffer = [false, false, false]
 let menuDebounce = true, backDebounce = true
@@ -177,7 +178,6 @@ function setup() {
 		"div1": createDiv(),
 		"div2": createDiv()
 	}
-	div1 = createDiv("Hi")
 
 	for (let box in timeInputs) {
 		// timeInputs[box].attribute("type", "number")
@@ -618,9 +618,6 @@ function transition(start, duration, type, style="linear") {
 			transitionDivs["div2"].position(0, windowHeight-windowWidth*5)
 			transitionDivs["div2"].size(slide, windowWidth*10)
 			transitionDivs["div2"].style("background-color: black; transform-origin: 0% 50%; transform: rotate(-45deg); opacity: 1")
-
-			// triangle(0, 0, 0, slide, slide, 0)
-			// triangle(0, windowHeight, 0, windowHeight - slide, slide, windowHeight)
 			break
 
 		case "shutter":
@@ -667,13 +664,6 @@ function transition(start, duration, type, style="linear") {
 			transitionDivs["div2"].position(windowWidth/2, lerp(0, windowHeight, t >= 0.5 ? (t-0.5)*2 : 0))
 			transitionDivs["div2"].size(windowWidth/2, lerp(windowHeight, 0, t >= 0.5 ? (t-0.5)*2 : 0))
 			transitionDivs["div2"].style("background-color: black; transform: rotate(0deg); transform-origin: center; opacity: 1")
-
-			// triangle(lerp(0, windowWidth, t), lerp(0, windowHeight, t), 0, windowHeight, windowWidth, windowHeight)
-			// triangle(windowWidth, windowHeight, windowWidth, 0, lerp(0, windowWidth, t), lerp(0, windowHeight, t))
-			// push()
-			// stroke(col)
-			// line(lerp(0, windowWidth, t), lerp(0, windowHeight, t), windowWidth, windowHeight)
-			// pop()
 			break
 
 		case "fadeOut": //// NEEDS RESETTING
@@ -782,11 +772,6 @@ function mousePressed() {
 
 					game.mode = "board"
 					game.updateAttributes(game.handleMove(...game.promoSquare, game.turn ? "P" : "p", game.copyBitboard(game.bitboards[game.bitboards.length-1]), game.copyBoard(game.board), [...game.canCastle[game.canCastle.length-1]], false, piece))
-
-					if ((game.turn ? game.whitePlayer : game.blackPlayer) !== "Human") {
-						let botMove = new Fortuna(game.copyBoard(game.board), game.copyBitboard(game.bitboards[game.bitboards.length-1]), [...game.canCastle[game.canCastle.length-1]], game.passantHistory[game.passantHistory.length-1], game.turn).makeMove()
-						game.updateAttributes(game.handleMove(...botMove, game.board[botMove[1]-1][botMove[0]-1], game.copyBitboard(game.bitboards[game.bitboards.length-1]), game.copyBoard(game.board), [...game.canCastle[game.canCastle.length-1]]))
-					}
 				}
 			}
 		}
@@ -854,6 +839,7 @@ function mousePressed() {
 
 				clickedTime = time
 				startFEN = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR"
+				game.status = "killed" // kills previous game
 				if (menuPreset[0] === "Standard") {
 					game = new Chess(startFEN, players[wPlayer-1], players[bPlayer-1], game.timeToMs(timeInputs["wMins"].value(), timeInputs["wSecs"].value()), game.timeToMs(timeInputs["bMins"].value(), timeInputs["bSecs"].value()), timeInputs["wIncr"].value()*1000, timeInputs["bIncr"].value()*1000)
 					currentTransition = ["lift", "cosine"]
@@ -1065,7 +1051,7 @@ class Chess { // Main Section of Code
 
 		if (this.whitePlayer !== "Human" && this.start) {
 			this.start = false
-			let botMove = await new Fortuna(this.copyBoard(this.board), this.copyBitboard(this.bitboards[this.bitboards.length-1]), [...this.canCastle[this.canCastle.length-1]], this.passantHistory[this.passantHistory.length-1], this.turn).makeMove()
+			let botMove = await this.getBotMove()
 			this.updateAttributes(this.handleMove(...botMove, this.board[botMove[1]-1][botMove[0]-1], this.copyBitboard(this.bitboards[this.bitboards.length-1]), this.copyBoard(this.board), [...this.canCastle[this.canCastle.length-1]], false, this.turn ? "Q" : "q"))	
 		}
 
@@ -1391,8 +1377,28 @@ class Chess { // Main Section of Code
 		this.updateStatus()
 
 		if (this.status === "active" && (this.turn ? this.whitePlayer : this.blackPlayer) !== "Human" && this.mode !== "promo") {
-			let botMove = await new Fortuna(this.copyBoard(move[0]), this.copyBitboard(move[2]), [...move[1]], move[4], this.turn).makeMove()
+			let botMove = await this.getBotMove()
 			this.updateAttributes(this.handleMove(...botMove, move[0][botMove[1]-1][botMove[0]-1], this.copyBitboard(move[2]), this.copyBoard(move[0]), [...move[1]], false, this.turn ? "Q" : "q"))
+		}
+	}
+
+	async getBotMove() {
+		let args = [this.copyBoard(this.board), this.copyBitboard(this.bitboards[this.bitboards.length-1]), [...this.canCastle[this.canCastle.length-1]], this.passantHistory[this.passantHistory.length-1], this.turn]
+		switch (this.turn ? this.whitePlayer : this.blackPlayer) {
+			case "Fortuna":
+				return await new Fortuna(...args).makeMove()
+
+			case "Equinox":
+				return await new Equinox(...args).makeMove()
+				
+			case "Astor":
+				return await new Astor(...args).makeMove()
+				
+			case "Lazaward":
+				return await new Lazaward(...args).makeMove()
+				
+			case "Aleph":
+				return await new Aleph(...args).makeMove()
 		}
 	}
 
@@ -1597,12 +1603,12 @@ class Chess { // Main Section of Code
 						pseudoLegalMoves.push([x1+2, y1])
 					}
 				}
-				break
+				break				
 		}
 
 		for (let v of pseudoLegalMoves) { // Final Move Validation
 			let newBoard = this.handleMove(x1, y1, v[0], v[1], piece, this.copyBitboard(this.bitboards[this.bitboards.length-1]), this.copyBoard(this.board), [...this.canCastle], true)
-			if (!this.isCheck(...newBoard[2][this.turn ? "K" : "k"][0], colour, newBoard[2], newBoard[0])) {
+			if (!this.isCheck(...newBoard[2][colour ? "K" : "k"][0], colour, newBoard[2], newBoard[0])) {
 				legalMoves.push([v[0], v[1]])
 			}
 		} return legalMoves
@@ -1615,9 +1621,8 @@ class Chess { // Main Section of Code
 		let passantSquare = [false, false]
 	
 		if (moves.some(v => v[0] === x2 && v[1] === y2) && this.mode === "board") { // Valid Moves
-			if (!query) {sfx["move"].play()}
-
 			if (!query) {
+				sfx["move"].play()
 				let pieceLocator = locator[piece].filter(v => v[0] !== x1 || v[1] !== y1)
 				let endSquare = this.getNotation(x1, y1)
 				let prevPassant = this.passantHistory[this.passantHistory.length-1]
@@ -1629,7 +1634,7 @@ class Chess { // Main Section of Code
 					passantSquare = [x1, (y1+y2)/2]
 				}
 
-				for (let [x, y] of pieceLocator) {
+				for (let [x, y] of pieceLocator) { // Notation stuff
 					let perms = this.getLegalMoves(x, y)
 					if (perms.some(v => v[0] === x2 && v[1] === y2)) { // If the move is possible with another piece.
 						repeat = true
@@ -1723,7 +1728,7 @@ class Chess { // Main Section of Code
 				notation += "+"; if (!query) {sfx["check"].play()}
 			} return [activeBoard, castleArr, locator, notation, passantSquare]
 		} return false
-	} // FIX CHESS960 HERE <--------------------------------------!!!!!!!
+	} // FIX CHESS960 HERE <--------------    return [{0}activeBoard, {1}castleArr, {2}locator, {3}notation, {4}passantSquare]
 
 	isCheck(x1, y1, colour, locator, activeBoard) {
 		let opposingKing = locator[colour ? "k" : "K"][0]
@@ -1768,10 +1773,10 @@ class Chess { // Main Section of Code
 		} return false
 	}
 
-	resetBoard() {game = new Chess(startFEN, players[wPlayer-1], players[bPlayer-1], this.timeToMs(timeInputs["wMins"].value(), timeInputs["wSecs"].value()), this.timeToMs(timeInputs["bMins"].value(), timeInputs["bSecs"].value()), timeInputs["wIncr"].value()*1000, timeInputs["bIncr"].value()*1000)}
+	resetBoard() {this.status = "killed"; game = new Chess(startFEN, players[wPlayer-1], players[bPlayer-1], this.timeToMs(timeInputs["wMins"].value(), timeInputs["wSecs"].value()), this.timeToMs(timeInputs["bMins"].value(), timeInputs["bSecs"].value()), timeInputs["wIncr"].value()*1000, timeInputs["bIncr"].value()*1000)}
 
-	undoMove() {
-		if (this.moveHistory.length !== 0) {
+	undoMove(query = false) {
+		if ((promiseDB || query) && this.moveHistory.length !== 0) {
 			this.turn = !this.turn
 			this.bitboards.pop()
 			this.moveHistory.pop()
@@ -1810,15 +1815,17 @@ class Fortuna extends Chess {
 		this.board = _board
 		this.boardHistory = [_board]
 		this.bitboards = [_bitboards]
-		this.canCastle = _canCastle
+		this.canCastle = [_canCastle]
 		this.passantHistory = [_passantHistory]
 		this.turn = _turn
 		this.move = 0
 	}
 
 	makeMove() {
+		promiseDB = false
 		return new Promise((resolve) => {
 			setTimeout(() => {
+				promiseDB = true
 				resolve(random(this.getAllLegalMoves()))
 			}, 300)
 		})
@@ -1828,11 +1835,34 @@ class Fortuna extends Chess {
 class Equinox extends Fortuna {
 	constructor(_board, _bitboards, _canCastle, _passantHistory, _turn) {
 		super(_board, _bitboards, _canCastle, _passantHistory, _turn)
+		this.pieceValues = {"P": 1, "N": 3, "B": 3, "R": 5, "Q": 9}
+	}
+
+	evaluate() {
+		let [wMats, bMats] = this.getMatList()
+		wMats = wMats.map(v => this.pieceValues[v.toUpperCase()]).reduce((total, v) => total + v, 0)
+		bMats = bMats.map(v => this.pieceValues[v.toUpperCase()]).reduce((total, v) => total + v, 0)
+		let matDiff = wMats - bMats
+		let kingSafety = (8 - this.getLegalMoves(...this.bitboards[this.bitboards.length-1][!this.turn ? "K" : "k"][0]).length)/10
+		return matDiff + kingSafety
 	}
 
 	makeMove() {
+		promiseDB = false
 		return new Promise((resolve) => {
-			resolve(null)
+			let moves = this.getAllLegalMoves()
+			let moveEvals = []
+
+			for (let v of moves) {
+				this.updateAttributes(this.handleMove(...v, this.board[v[1]-1][v[0]-1], this.copyBitboard(this.bitboards[this.bitboards.length-1]), this.copyBoard(this.board), [...this.canCastle[this.canCastle.length-1]], true, this.turn ? "Q" : "q"))
+				moveEvals.push(this.evaluate())
+				this.undoMove(true)
+			}
+
+			let bestMove = moveEvals.findIndex(v => v === (this.turn ? max(moveEvals) : min(moveEvals)))
+
+			promiseDB = true
+			resolve(moves[bestMove])
 		})
 	}
 }
@@ -1872,3 +1902,4 @@ class Aleph extends Lazaward {
 		})
 	}
 }
+
