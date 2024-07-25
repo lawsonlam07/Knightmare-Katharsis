@@ -5,6 +5,8 @@ const descCustom = "Chess, but you set up the starting position. Play with a fri
 
 let startFEN = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR"
 let newFEN = "rn1qkb1r/pp2pppp/2p2n2/5b2/P1pP3N/2N5/1P2PPPP/R1BQKB1R"
+let FEN2 = "r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R"
+let FEN3 = "8/2p5/3p4/KP5r/1R3p1k/8/4P1P1/8"
 
 let backTime = 0, backStartTime = 0
 let clickedTime = 0
@@ -78,6 +80,20 @@ function setup() {
 	createCanvas(windowWidth, windowHeight)
 	textFont(kodeMono)
 	game = new Chess(newFEN)
+	// let t1 = new Date().getTime()
+	// console.log(new Chess(FEN3, "Human", "Human", 600000, 600000, 0, 0, [false, false, false, false]).moveTest(1), (new Date().getTime() - t1)/1000)
+
+	// t1 = new Date().getTime()
+	// console.log(new Chess(FEN3, "Human", "Human", 600000, 600000, 0, 0, [false, false, false, false]).moveTest(2), (new Date().getTime() - t1)/1000)
+
+	// t1 = new Date().getTime()
+	// console.log(new Chess(FEN3, "Human", "Human", 600000, 600000, 0, 0, [false, false, false, false]).moveTest(3), (new Date().getTime() - t1)/1000)
+
+	// t1 = new Date().getTime()
+	// console.log(new Chess(FEN3, "Human", "Human", 600000, 600000, 0, 0, [false, false, false, false]).moveTest(4), (new Date().getTime() - t1)/1000)
+
+	// t1 = new Date().getTime()
+	// console.log(new Chess(FEN3, "Human", "Human", 600000, 600000, 0, 0, [false, false, false, false]).moveTest(5), (new Date().getTime() - t1)/1000)
 
 	backButton = createDiv("Back")
 	backButton.style(menuButtonStyle + `
@@ -841,7 +857,7 @@ function mousePressed() {
 				startFEN = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR"
 				game.status = "killed" // kills previous game
 				if (menuPreset[0] === "Standard") {
-					game = new Chess(startFEN, players[wPlayer-1], players[bPlayer-1], game.timeToMs(timeInputs["wMins"].value(), timeInputs["wSecs"].value()), game.timeToMs(timeInputs["bMins"].value(), timeInputs["bSecs"].value()), timeInputs["wIncr"].value()*1000, timeInputs["bIncr"].value()*1000)
+					game = new Chess(FEN2, players[wPlayer-1], players[bPlayer-1], game.timeToMs(timeInputs["wMins"].value(), timeInputs["wSecs"].value()), game.timeToMs(timeInputs["bMins"].value(), timeInputs["bSecs"].value()), timeInputs["wIncr"].value()*1000, timeInputs["bIncr"].value()*1000)
 					currentTransition = ["lift", "cosine"]
 				} else if (menuPreset[0] === "Chess960") {
 					let startPos = generate960()
@@ -937,12 +953,12 @@ function keyPressed() {
 }
 
 class Chess { // Main Section of Code
-	constructor(fen, wPlayer="Human", bPlayer="Human", wTime=600000, bTime=600000, wIncr=0, bIncr=0) {
+	constructor(fen, wPlayer="Human", bPlayer="Human", wTime=600000, bTime=600000, wIncr=0, bIncr=0, castleArr=[true, true, true, true]) {
 		this.boardHistory = [this.initiateBoard(fen)]
 		this.bitboards = [this.getBitboards(fen)]
 		this.board = this.initiateBoard(fen)
 		this.promoSquare = [false, false, false, false]
-		this.canCastle = [[true, true, true, true]]
+		this.canCastle = [[...castleArr]]
 		this.passantHistory = [[false, false]]
 		this.highlightSquares = []
 		this.arrowSquares = []
@@ -1023,6 +1039,7 @@ class Chess { // Main Section of Code
 	}
 
 	tween(x1, y1, x2, y2) {
+
 		let xIncre = x2-x1 ? floor((x2-x1) / abs(x2-x1)) : 0
 		let yIncre = y2-y1 ? floor((y2-y1) / abs(y2-y1)) : 0
 		let tweenSquares = []
@@ -1476,6 +1493,23 @@ class Chess { // Main Section of Code
 		} return moves
 	}
 
+	moveTest(depth, prev="") {
+		let moves = this.getAllLegalMoves()
+		let positions = 0
+		if (depth === 0) {return 1}
+
+		for (let v of moves) {
+			let args = this.handleMove(...v, this.board[v[1]-1][v[0]-1], this.copyBitboard(this.bitboards[this.bitboards.length-1]), this.copyBoard(this.board), [...this.canCastle[this.canCastle.length-1]], true, this.turn ? "Q" : "q")
+			this.updateAttributes(args)
+			positions += this.moveTest(depth-1, args[3])
+			this.undoMove(true)
+			//if(prev==="a4") {console.log(args[3])}
+		}
+
+		//console.log(positions, prev)
+		return positions
+	}
+
 	getHorizontalMoves(x1, y1) {
 		let validMoves = []
 		let colour = this.getColour(this.board[y1-1][x1-1])
@@ -1588,18 +1622,18 @@ class Chess { // Main Section of Code
 						}
 					}
 				}
-				if (colour && (this.moveHistory.length === 0 || this.moveHistory[this.moveHistory.length-1].slice(-1) !== "+")) { // Checks that every square between the king and rook is empty; AMEND FOR CHESS960 // || v[0] === this.rookStartX[0] || v[0] === this.bitboards["K"][0][0])) {
-					if (this.canCastle[this.canCastle.length-1][0] && this.tween(5, 8, 1, 8).every(v => this.board[v[1]-1][v[0]-1] === "#" && !this.isCheck(v[0], v[1], colour, this.bitboards[this.bitboards.length-1], this.board))) {
+				if (colour && (this.moveHistory.length === 0 || this.moveHistory[this.moveHistory.length-1].slice(-1) !== "+") && !this.isCheck(5, 8, colour, this.bitboards[this.bitboards.length-1], this.board)) { // Checks that every square between the king and rook is empty; AMEND FOR CHESS960 // || v[0] === this.rookStartX[0] || v[0] === this.bitboards["K"][0][0])) {
+					if (this.canCastle[this.canCastle.length-1][0] && this.board[8-1][2-1] === "#" && [[3, 8], [4, 8]].every(v => this.board[v[1]-1][v[0]-1] === "#" && !this.isCheck(v[0], v[1], colour, this.bitboards[this.bitboards.length-1], this.board))) {
 						pseudoLegalMoves.push([x1-2, y1]) // Check if the player is castling through check, NOTE THAT THE CASTLING THROUGH CHECK BIT IS HARDCODED
 					}
-					if (this.canCastle[this.canCastle.length-1][1] && this.tween(5, 8, 8, 8).every(v => this.board[v[1]-1][v[0]-1] === "#" && !this.isCheck(v[0], v[1], colour, this.bitboards[this.bitboards.length-1], this.board))) {
+					if (this.canCastle[this.canCastle.length-1][1] && [[6, 8], [7, 8]].every(v => this.board[v[1]-1][v[0]-1] === "#" && !this.isCheck(v[0], v[1], colour, this.bitboards[this.bitboards.length-1], this.board))) {
 						pseudoLegalMoves.push([x1+2, y1])
 					}
-				} else {
-					if (this.canCastle[this.canCastle.length-1][2] && this.tween(5, 1, 1, 1).every(v => this.board[v[1]-1][v[0]-1] === "#" && !this.isCheck(v[0], v[1], colour, this.bitboards[this.bitboards.length-1], this.board))) {
+				} else if (!this.isCheck(5, 1, colour, this.bitboards[this.bitboards.length-1], this.board)) {
+					if (this.canCastle[this.canCastle.length-1][2] && this.board[1-1][2-1] === "#" && [[3, 1], [4, 1]].every(v => this.board[v[1]-1][v[0]-1] === "#" && !this.isCheck(v[0], v[1], colour, this.bitboards[this.bitboards.length-1], this.board))) {
 						pseudoLegalMoves.push([x1-2, y1])
 					}
-					if (this.canCastle[this.canCastle.length-1][3] && this.tween(5, 1, 8, 1).every(v => this.board[v[1]-1][v[0]-1] === "#" && !this.isCheck(v[0], v[1], colour, this.bitboards[this.bitboards.length-1], this.board))) {
+					if (this.canCastle[this.canCastle.length-1][3] && [[6, 1], [7, 1]].every(v => this.board[v[1]-1][v[0]-1] === "#" && !this.isCheck(v[0], v[1], colour, this.bitboards[this.bitboards.length-1], this.board))) {
 						pseudoLegalMoves.push([x1+2, y1])
 					}
 				}
@@ -1630,10 +1664,6 @@ class Chess { // Main Section of Code
 				let disambiguateY = []
 				let repeat = false
 
-				if (piece.toUpperCase() === "P" && abs(y1-y2) === 2) { // En passant checker.
-					passantSquare = [x1, (y1+y2)/2]
-				}
-
 				for (let [x, y] of pieceLocator) { // Notation stuff
 					let perms = this.getLegalMoves(x, y)
 					if (perms.some(v => v[0] === x2 && v[1] === y2)) { // If the move is possible with another piece.
@@ -1654,6 +1684,10 @@ class Chess { // Main Section of Code
 				} else if ((activeBoard[y2-1][x2-1] !== "#" || (x2 === prevPassant[0] && y2 === prevPassant[1])) && piece.toUpperCase() === "P") {
 					notation += endSquare.slice(0, 1)
 				}
+			}
+
+			if (piece.toUpperCase() === "P" && abs(y1-y2) === 2) { // En passant checker.
+				passantSquare = [x1, (y1+y2)/2]
 			}
 
 			if (activeBoard[y2-1][x2-1] !== "#") {notation += "x"}
