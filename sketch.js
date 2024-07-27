@@ -15,6 +15,8 @@ let newFEN = "rn1qkb1r/pp2pppp/2p2n2/5b2/P1pP3N/2N5/1P2PPPP/R1BQKB1R"
 // let t1 = new Date().getTime()
 // console.log(new Chess(FEN1).moveTest(1), (new Date().getTime() - t1)/1000)
 
+let winFEN = "rnb1kbnr/pppp1ppp/8/4p3/6Pq/5P2/PPPPP2P/RNBQKBNR"
+
 let backTime = 0, backStartTime = 0
 let clickedTime = 0
 let transitionDuration = 500
@@ -850,7 +852,7 @@ function mousePressed() {
 				startFEN = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR"
 				game.status = "killed" // kills previous game
 				if (menuPreset[0] === "Standard") {
-					game = new Chess(FEN2, players[wPlayer-1], players[bPlayer-1], game.timeToMs(timeInputs["wMins"].value(), timeInputs["wSecs"].value()), game.timeToMs(timeInputs["bMins"].value(), timeInputs["bSecs"].value()), timeInputs["wIncr"].value()*1000, timeInputs["bIncr"].value()*1000)
+					game = new Chess(startFEN, players[wPlayer-1], players[bPlayer-1], game.timeToMs(timeInputs["wMins"].value(), timeInputs["wSecs"].value()), game.timeToMs(timeInputs["bMins"].value(), timeInputs["bSecs"].value()), timeInputs["wIncr"].value()*1000, timeInputs["bIncr"].value()*1000)
 					currentTransition = ["lift", "cosine"]
 				} else if (menuPreset[0] === "Chess960") {
 					let startPos = generate960()
@@ -1062,7 +1064,7 @@ class Chess { // Main Section of Code
 		if (this.whitePlayer !== "Human" && this.start) {
 			this.start = false
 			let botMove = await this.getBotMove()
-			this.updateAttributes(this.handleMove(...botMove, this.turn ? "Q" : "q", false))	
+			this.updateAttributes(this.handleMove(...botMove, false))	
 		}
 
 		push()
@@ -1388,12 +1390,12 @@ class Chess { // Main Section of Code
 
 		if (this.status === "active" && (this.turn ? this.whitePlayer : this.blackPlayer) !== "Human" && this.mode !== "promo") {
 			let botMove = await this.getBotMove()
-			this.updateAttributes(this.handleMove(...botMove, this.turn ? "Q" : "q", false))
+			this.updateAttributes(this.handleMove(...botMove, false))
 		}
 	}
 
 	async getBotMove() {
-		let args = [this.copyBoard(this.board), this.copyBitboard(this.bitboards[this.bitboards.length-1]), [...this.canCastle[this.canCastle.length-1]], this.passantHistory[this.passantHistory.length-1], this.turn]
+		let args = [this.copyBoard(this.board), this.copyBitboard(this.bitboards[this.bitboards.length-1]), [...this.canCastle[this.canCastle.length-1]], this.passantHistory[this.passantHistory.length-1], this.turn, this.move]
 		switch (this.turn ? this.whitePlayer : this.blackPlayer) {
 			case "Fortuna":
 				return await new Fortuna(...args).makeMove()
@@ -1761,7 +1763,7 @@ class Chess { // Main Section of Code
 				castleArr[1] = false
 			}
 
-			if (this.isCheck(...locator[this.turn ? "k" : "K"][0], !this.turn, locator, this.board)) {
+			if (this.isCheck(...locator[this.turn ? "k" : "K"][0], !this.turn, locator, activeBoard)) {
 				notation += "+"; if (!query) {sfx["check"].play()}
 			} return [activeBoard, castleArr, locator, notation, passantSquare]
 		} return false
@@ -1847,7 +1849,7 @@ class Chess { // Main Section of Code
 }
 
 class Fortuna extends Chess {
-	constructor(_board, _bitboards, _canCastle, _passantHistory, _turn) {
+	constructor(_board, _bitboards, _canCastle, _passantHistory, _turn, _move) {
 		super(startFEN)
 		this.board = _board
 		this.boardHistory = [_board]
@@ -1855,7 +1857,7 @@ class Fortuna extends Chess {
 		this.canCastle = [_canCastle]
 		this.passantHistory = [_passantHistory]
 		this.turn = _turn
-		this.move = 0
+		this.moveCounter = _move
 	}
 
 	makeMove() {
@@ -1870,18 +1872,30 @@ class Fortuna extends Chess {
 }
 
 class Equinox extends Fortuna {
-	constructor(_board, _bitboards, _canCastle, _passantHistory, _turn) {
-		super(_board, _bitboards, _canCastle, _passantHistory, _turn)
+	constructor(_board, _bitboards, _canCastle, _passantHistory, _turn, _move) {
+		super(_board, _bitboards, _canCastle, _passantHistory, _turn, _move)
 		this.pieceValues = {"P": 1, "N": 3, "B": 3, "R": 5, "Q": 9}
 	}
 
 	evaluate() {
+		let totalDist = 0
+		let pieces = ["P", "N", "B"]
+		if (!this.turn) {pieces = pieces.map(v => v.toLowerCase())}
+		if (this.moveCounter <= 25) {
+			for (let p of pieces) {
+				for (let [x1, y1] of this.bitboards[this.bitboards.length-1][p]) {
+					totalDist += (this.turn ? 0.5 - dist(4.5, 4.5, x1, y1)/10: dist(4.5, 4.5, x1, y1)/10) 
+				}				
+			}
+		}
+
 		let [wMats, bMats] = this.getMatList()
 		wMats = wMats.map(v => this.pieceValues[v.toUpperCase()]).reduce((total, v) => total + v, 0)
 		bMats = bMats.map(v => this.pieceValues[v.toUpperCase()]).reduce((total, v) => total + v, 0)
 		let matDiff = wMats - bMats
-		let kingSafety = (8 - this.getLegalMoves(...this.bitboards[this.bitboards.length-1][!this.turn ? "K" : "k"][0]).length)/10
-		return matDiff + kingSafety
+
+
+		return matDiff + totalDist
 	}
 
 	makeMove() {
@@ -1890,9 +1904,17 @@ class Equinox extends Fortuna {
 			let moves = this.getAllLegalMoves()
 			let moveEvals = []
 
-			for (let v of moves) {
-				this.updateAttributes(this.handleMove(...v, this.turn ? "Q" : "q", true))
-				moveEvals.push(this.evaluate())
+			for (let v1 of moves) {
+				let evalsTemp = []
+				this.updateAttributes(this.handleMove(...v1, true))
+
+				for (let v2 of this.getAllLegalMoves()) {
+					this.updateAttributes(this.handleMove(...v2, true))
+					evalsTemp.push(this.evaluate())
+					this.undoMove(true)
+				}
+
+				moveEvals.push(this.turn ? max(evalsTemp) : min(evalsTemp))
 				this.undoMove(true)
 			}
 
@@ -1905,8 +1927,8 @@ class Equinox extends Fortuna {
 }
 
 class Astor extends Equinox {
-	constructor(_board, _bitboards, _canCastle, _passantHistory, _turn) {
-		super(_board, _bitboards, _canCastle, _passantHistory, _turn)
+	constructor(_board, _bitboards, _canCastle, _passantHistory, _turn, _move) {
+		super(_board, _bitboards, _canCastle, _passantHistory, _turn, _move)
 	}
 
 	makeMove() {
@@ -1917,8 +1939,8 @@ class Astor extends Equinox {
 }
 
 class Lazaward extends Astor {
-	constructor(_board, _bitboards, _canCastle, _passantHistory, _turn) {
-		super(_board, _bitboards, _canCastle, _passantHistory, _turn)
+	constructor(_board, _bitboards, _canCastle, _passantHistory, _turn, _move) {
+		super(_board, _bitboards, _canCastle, _passantHistory, _turn, _move)
 	}
 
 	makeMove() {
@@ -1929,8 +1951,8 @@ class Lazaward extends Astor {
 }
 
 class Aleph extends Lazaward {
-	constructor(_board, _bitboards, _canCastle, _passantHistory, _turn) {
-		super(_board, _bitboards, _canCastle, _passantHistory, _turn)
+	constructor(_board, _bitboards, _canCastle, _passantHistory, _turn, _move) {
+		super(_board, _bitboards, _canCastle, _passantHistory, _turn, _move)
 	}
 
 	makeMove() {
