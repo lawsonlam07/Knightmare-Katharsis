@@ -1,5 +1,5 @@
 const botApi = new Worker("bots.js")
-botApi.onmessage = (botMove) => {game.updateAttributes(game.handleMove(...botMove.data, false))}
+botApi.onmessage = (botMove) => {promiseDB = true; game.updateAttributes(game.handleMove(...botMove.data, false))}
 
 const descHotkeys = "You can drag or click to move.\n\nRight click to highlight squares and drag right click to draw arrows.\n\nHotkeys (PC ONLY):\n\n\tX to flip board.\nR to reset board.\nU to undo move.\nLeft Arrow to move back a move.\nRight Arrow to move forward a move.\nUp Arrow to go to the start of a game.\nDown Arrow to go to the end of a game."
 const descStandard = "Chess with the standard starting position and rules. Play with a friend, or one of the bots!\n\nBefore starting, you can choose who plays as white and black. You must also choose time controls for both players."
@@ -1038,7 +1038,6 @@ class Chess { // Main Section of Code
 	}
 
 	tween(x1, y1, x2, y2) {
-
 		let xIncre = x2-x1 ? floor((x2-x1) / abs(x2-x1)) : 0
 		let yIncre = y2-y1 ? floor((y2-y1) / abs(y2-y1)) : 0
 		let tweenSquares = []
@@ -1067,6 +1066,7 @@ class Chess { // Main Section of Code
 
 		if (this.whitePlayer !== "Human" && this.start) {
 			this.start = false
+			promiseDB = false
 			let args = [this.copyBoard(this.board), this.copyBitboard(this.bitboards[this.bitboards.length-1]), [...this.canCastle[this.canCastle.length-1]], this.passantHistory[this.passantHistory.length-1], this.turn, this.move]
 			botApi.postMessage([(this.turn ? this.whitePlayer : this.blackPlayer), args])
 		}
@@ -1393,6 +1393,7 @@ class Chess { // Main Section of Code
 		this.updateStatus()
 
 		if (this.status === "active" && (this.turn ? this.whitePlayer : this.blackPlayer) !== "Human" && this.mode !== "promo") {
+			promiseDB = false
 			let args = [this.copyBoard(this.board), this.copyBitboard(this.bitboards[this.bitboards.length-1]), [...this.canCastle[this.canCastle.length-1]], this.passantHistory[this.passantHistory.length-1], this.turn, this.move]
 			botApi.postMessage([(this.turn ? this.whitePlayer : this.blackPlayer), args])
 		}
@@ -1796,7 +1797,7 @@ class Chess { // Main Section of Code
 		} return false
 	}
 
-	resetBoard() {console.log("hi"); this.status = "killed"; game = new Chess(startFEN, players[wPlayer-1], players[bPlayer-1], this.timeToMs(timeInputs["wMins"].value(), timeInputs["wSecs"].value()), this.timeToMs(timeInputs["bMins"].value(), timeInputs["bSecs"].value()), timeInputs["wIncr"].value()*1000, timeInputs["bIncr"].value()*1000)}
+	resetBoard() {this.status = "killed"; game = new Chess(startFEN, players[wPlayer-1], players[bPlayer-1], this.timeToMs(timeInputs["wMins"].value(), timeInputs["wSecs"].value()), this.timeToMs(timeInputs["bMins"].value(), timeInputs["bSecs"].value()), timeInputs["wIncr"].value()*1000, timeInputs["bIncr"].value()*1000)}
 
 	undoMove(query = false) {
 		if ((promiseDB || query) && this.moveHistory.length !== 0) {
