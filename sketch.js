@@ -1,3 +1,6 @@
+const botApi = new Worker("bots.js")
+botApi.onmessage = (botMove) => {game.updateAttributes(game.handleMove(...botMove.data, false))}
+
 const descHotkeys = "You can drag or click to move.\n\nRight click to highlight squares and drag right click to draw arrows.\n\nHotkeys (PC ONLY):\n\n\tX to flip board.\nR to reset board.\nU to undo move.\nLeft Arrow to move back a move.\nRight Arrow to move forward a move.\nUp Arrow to go to the start of a game.\nDown Arrow to go to the end of a game."
 const descStandard = "Chess with the standard starting position and rules. Play with a friend, or one of the bots!\n\nBefore starting, you can choose who plays as white and black. You must also choose time controls for both players."
 const desc960 = "Chess, but the starting position is random. Play with a friend, or one of the bots!\n\nBefore starting, you can choose who plays as white and black. You must also choose time controls for both players."
@@ -86,6 +89,7 @@ function preload() {
 
 function setup() {
 	// songs["checkmate"].loop()
+
 	createCanvas(windowWidth, windowHeight)
 	textFont(kodeMono)
 	game = new Chess(newFEN)
@@ -1063,7 +1067,8 @@ class Chess { // Main Section of Code
 
 		if (this.whitePlayer !== "Human" && this.start) {
 			this.start = false
-			this.getBotMove()
+			let args = [this.copyBoard(this.board), this.copyBitboard(this.bitboards[this.bitboards.length-1]), [...this.canCastle[this.canCastle.length-1]], this.passantHistory[this.passantHistory.length-1], this.turn, this.move]
+			botApi.postMessage([(this.turn ? this.whitePlayer : this.blackPlayer), args])
 		}
 
 		push()
@@ -1388,33 +1393,8 @@ class Chess { // Main Section of Code
 		this.updateStatus()
 
 		if (this.status === "active" && (this.turn ? this.whitePlayer : this.blackPlayer) !== "Human" && this.mode !== "promo") {
-			this.getBotMove()
-			//this.updateAttributes(this.handleMove(...botMove, false))
-		}
-	}
-
-	async getBotMove() {
-		let args = [this.copyBoard(this.board), this.copyBitboard(this.bitboards[this.bitboards.length-1]), [...this.canCastle[this.canCastle.length-1]], this.passantHistory[this.passantHistory.length-1], this.turn, this.move]
-		switch (this.turn ? this.whitePlayer : this.blackPlayer) {
-			case "Fortuna":
-				this.updateAttributes(this.handleMove(...await new Fortuna(...args).makeMove(), false))
-				break
-
-			case "Equinox":
-				this.updateAttributes(this.handleMove(...await new Equinox(...args).makeMove(), false))
-				break
-				
-			case "Astor":
-				this.updateAttributes(this.handleMove(...await new Astor(...args).makeMove(), false))
-				break
-				
-			case "Lazaward":
-				this.updateAttributes(this.handleMove(...await new Lazaward(...args).makeMove(), false))
-				break
-				
-			case "Aleph":
-				this.updateAttributes(this.handleMove(...await new Aleph(...args).makeMove(), false))
-				break
+			let args = [this.copyBoard(this.board), this.copyBitboard(this.bitboards[this.bitboards.length-1]), [...this.canCastle[this.canCastle.length-1]], this.passantHistory[this.passantHistory.length-1], this.turn, this.move]
+			botApi.postMessage([(this.turn ? this.whitePlayer : this.blackPlayer), args])
 		}
 	}
 
@@ -1851,119 +1831,3 @@ class Chess { // Main Section of Code
 		moves.remove()
 	}
 }
-
-class Fortuna extends Chess {
-	constructor(_board, _bitboards, _canCastle, _passantHistory, _turn, _move) {
-		super(startFEN)
-		this.board = _board
-		this.boardHistory = [_board]
-		this.bitboards = [_bitboards]
-		this.canCastle = [_canCastle]
-		this.passantHistory = [_passantHistory]
-		this.turn = _turn
-		this.moveCounter = _move
-	}
-
-	async makeMove() {
-		promiseDB = false
-		return new Promise((resolve) => {
-			setTimeout(() => {
-				promiseDB = true
-				resolve(random(this.getAllLegalMoves()))
-			}, 300)
-		})
-	}
-}
-
-class Equinox extends Fortuna {
-	constructor(_board, _bitboards, _canCastle, _passantHistory, _turn, _move) {
-		super(_board, _bitboards, _canCastle, _passantHistory, _turn, _move)
-		this.pieceValues = {"P": 1, "N": 3, "B": 3, "R": 5, "Q": 9}
-	}
-
-	evaluate() {
-		let totalDist = 0
-		let pieces = ["P", "N", "B"]
-		if (!this.turn) {pieces = pieces.map(v => v.toLowerCase())}
-		if (this.moveCounter <= 25) {
-			for (let p of pieces) {
-				for (let [x1, y1] of this.bitboards[this.bitboards.length-1][p]) {
-					totalDist += (this.turn ? 0.5 - dist(4.5, 4.5, x1, y1)/10: dist(4.5, 4.5, x1, y1)/10) 
-				}				
-			}
-		}
-
-		let [wMats, bMats] = this.getMatList()
-		wMats = wMats.map(v => this.pieceValues[v.toUpperCase()]).reduce((total, v) => total + v, 0)
-		bMats = bMats.map(v => this.pieceValues[v.toUpperCase()]).reduce((total, v) => total + v, 0)
-		let matDiff = wMats - bMats
-
-
-		return matDiff + totalDist
-	}
-
-	async makeMove() {
-		promiseDB = false
-		return new Promise((resolve) => {
-			let moves = this.getAllLegalMoves()
-			let moveEvals = []
-
-			for (let v1 of moves) {
-				let evalsTemp = []
-				this.updateAttributes(this.handleMove(...v1, true))
-
-				for (let v2 of this.getAllLegalMoves()) {
-					this.updateAttributes(this.handleMove(...v2, true))
-					evalsTemp.push(this.evaluate())
-					this.undoMove(true)
-				}
-
-				moveEvals.push(this.turn ? max(evalsTemp) : min(evalsTemp))
-				this.undoMove(true)
-			}
-
-			let bestEval = this.turn ? max(moveEvals) : min(moveEvals)
-			let bestIndices = moveEvals.map((v, i) => {if (v === bestEval) {return i}}).filter(v => v !== undefined)
-
-			promiseDB = true
-			resolve(moves[random(bestIndices)])
-		})
-	}
-}
-
-class Astor extends Equinox {
-	constructor(_board, _bitboards, _canCastle, _passantHistory, _turn, _move) {
-		super(_board, _bitboards, _canCastle, _passantHistory, _turn, _move)
-	}
-
-	makeMove() {
-		return new Promise((resolve) => {
-			resolve(null)
-		})
-	}
-}
-
-class Lazaward extends Astor {
-	constructor(_board, _bitboards, _canCastle, _passantHistory, _turn, _move) {
-		super(_board, _bitboards, _canCastle, _passantHistory, _turn, _move)
-	}
-
-	makeMove() {
-		return new Promise((resolve) => {
-			resolve(null)
-		})
-	}
-}
-
-class Aleph extends Lazaward {
-	constructor(_board, _bitboards, _canCastle, _passantHistory, _turn, _move) {
-		super(_board, _bitboards, _canCastle, _passantHistory, _turn, _move)
-	}
-
-	makeMove() {
-		return new Promise((resolve) => {
-			resolve(null)
-		})
-	}
-}
-
