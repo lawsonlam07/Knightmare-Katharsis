@@ -9,18 +9,23 @@ onmessage = (v) => {
 	switch (plr) {
 		case "Fortuna":
 			new Fortuna(...args).makeMove()
+			break
 
 		case "Equinox":
 			new Equinox(...args).makeMove()
+			break
 			
 		case "Astor":
 			new Astor(...args).makeMove()
+			break
 
 		case "Lazaward":
 			new Lazaward(...args).makeMove()
+			break
 
 		case "Aleph":
 			new Aleph(...args).makeMove()
+			break
 	}
 }
 
@@ -917,14 +922,10 @@ class Fortuna extends Chess {
 		this.moveCounter = _move
 	}
 
-	async makeMove() {
-		promiseDB = false
-		return new Promise((resolve) => {
-			setTimeout(() => {
-				promiseDB = true
-				postMessage(random(this.getAllLegalMoves()))
-			}, 300)
-		})
+	makeMove() {
+		setTimeout(() => {
+			postMessage(random(this.getAllLegalMoves()))
+		}, 300)
 	}
 }
 
@@ -955,30 +956,28 @@ class Equinox extends Fortuna {
 		return matDiff + totalDist
 	}
 
-	async makeMove() {
-		promiseDB = false
-			let moves = this.getAllLegalMoves()
-			let moveEvals = []
+	makeMove() {
+		let moves = this.getAllLegalMoves()
+		let moveEvals = []
 
-			for (let v1 of moves) {
-				let evalsTemp = []
-				this.updateAttributes(this.handleMove(...v1, true))
+		for (let v1 of moves) {
+			let evalsTemp = []
+			this.updateAttributes(this.handleMove(...v1, true))
 
-				for (let v2 of this.getAllLegalMoves()) {
-					this.updateAttributes(this.handleMove(...v2, true))
-					evalsTemp.push(this.evaluate())
-					this.undoMove(true)
-				}
-
-				moveEvals.push(this.turn ? max(...evalsTemp) : min(...evalsTemp))
+			for (let v2 of this.getAllLegalMoves()) {
+				this.updateAttributes(this.handleMove(...v2, true))
+				evalsTemp.push(this.evaluate())
 				this.undoMove(true)
 			}
 
-			let bestEval = this.turn ? max(...moveEvals) : min(...moveEvals)
-			let bestIndices = moveEvals.map((v, i) => {if (v === bestEval) {return i}}).filter(v => v !== undefined)
+			moveEvals.push(this.turn ? max(...evalsTemp) : min(...evalsTemp))
+			this.undoMove(true)
+		}
 
-			promiseDB = true
-			postMessage(moves[random(bestIndices)])
+		let bestEval = this.turn ? max(...moveEvals) : min(...moveEvals)
+		let bestIndices = moveEvals.map((v, i) => {if (v === bestEval) {return i}}).filter(v => v !== undefined)
+
+		postMessage(moves[random(bestIndices)])
  	}
 }
 
@@ -1017,4 +1016,3 @@ class Aleph extends Lazaward {
 		})
 	}
 }
-
