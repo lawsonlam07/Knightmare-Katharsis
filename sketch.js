@@ -1047,7 +1047,7 @@ class Chess { // Main Section of Code
 
 	////////// Front End - User Interface //////////
 
-	async draw() { // Where it all happens...
+	draw() { // Where it all happens...
 		// this.highlightSquares = this.bitboards[this.bitboards.length-1]["q"]
 		if (this.status === "active") {
 			if (this.turn) {this.whiteTime = max(this.whiteTime - (time - this.moveTime), 0)}
@@ -1063,8 +1063,7 @@ class Chess { // Main Section of Code
 
 		if (this.whitePlayer !== "Human" && this.start) {
 			this.start = false
-			let botMove = await this.getBotMove()
-			this.updateAttributes(this.handleMove(...botMove, false))	
+			this.getBotMove()
 		}
 
 		push()
@@ -1371,7 +1370,7 @@ class Chess { // Main Section of Code
 
 	////////// Back End - Move Validation //////////
 
-	async updateAttributes(move) {
+	updateAttributes(move) {
 		if (this.turn) {this.whiteTime += this.whiteIncrement} else {this.blackTime += this.blackIncrement}
 		this.board = move[0]
 		this.boardHistory.push(move[0])
@@ -1389,8 +1388,8 @@ class Chess { // Main Section of Code
 		this.updateStatus()
 
 		if (this.status === "active" && (this.turn ? this.whitePlayer : this.blackPlayer) !== "Human" && this.mode !== "promo") {
-			let botMove = await this.getBotMove()
-			this.updateAttributes(this.handleMove(...botMove, false))
+			this.getBotMove()
+			//this.updateAttributes(this.handleMove(...botMove, false))
 		}
 	}
 
@@ -1398,19 +1397,24 @@ class Chess { // Main Section of Code
 		let args = [this.copyBoard(this.board), this.copyBitboard(this.bitboards[this.bitboards.length-1]), [...this.canCastle[this.canCastle.length-1]], this.passantHistory[this.passantHistory.length-1], this.turn, this.move]
 		switch (this.turn ? this.whitePlayer : this.blackPlayer) {
 			case "Fortuna":
-				return await new Fortuna(...args).makeMove()
+				this.updateAttributes(this.handleMove(...await new Fortuna(...args).makeMove(), false))
+				break
 
 			case "Equinox":
-				return await new Equinox(...args).makeMove()
+				this.updateAttributes(this.handleMove(...await new Equinox(...args).makeMove(), false))
+				break
 				
 			case "Astor":
-				return await new Astor(...args).makeMove()
+				this.updateAttributes(this.handleMove(...await new Astor(...args).makeMove(), false))
+				break
 				
 			case "Lazaward":
-				return await new Lazaward(...args).makeMove()
+				this.updateAttributes(this.handleMove(...await new Lazaward(...args).makeMove(), false))
+				break
 				
 			case "Aleph":
-				return await new Aleph(...args).makeMove()
+				this.updateAttributes(this.handleMove(...await new Aleph(...args).makeMove(), false))
+				break
 		}
 	}
 
@@ -1812,7 +1816,7 @@ class Chess { // Main Section of Code
 		} return false
 	}
 
-	resetBoard() {this.status = "killed"; game = new Chess(startFEN, players[wPlayer-1], players[bPlayer-1], this.timeToMs(timeInputs["wMins"].value(), timeInputs["wSecs"].value()), this.timeToMs(timeInputs["bMins"].value(), timeInputs["bSecs"].value()), timeInputs["wIncr"].value()*1000, timeInputs["bIncr"].value()*1000)}
+	resetBoard() {console.log("hi"); this.status = "killed"; game = new Chess(startFEN, players[wPlayer-1], players[bPlayer-1], this.timeToMs(timeInputs["wMins"].value(), timeInputs["wSecs"].value()), this.timeToMs(timeInputs["bMins"].value(), timeInputs["bSecs"].value()), timeInputs["wIncr"].value()*1000, timeInputs["bIncr"].value()*1000)}
 
 	undoMove(query = false) {
 		if ((promiseDB || query) && this.moveHistory.length !== 0) {
@@ -1860,7 +1864,7 @@ class Fortuna extends Chess {
 		this.moveCounter = _move
 	}
 
-	makeMove() {
+	async makeMove() {
 		promiseDB = false
 		return new Promise((resolve) => {
 			setTimeout(() => {
@@ -1898,7 +1902,7 @@ class Equinox extends Fortuna {
 		return matDiff + totalDist
 	}
 
-	makeMove() {
+	async makeMove() {
 		promiseDB = false
 		return new Promise((resolve) => {
 			let moves = this.getAllLegalMoves()
@@ -1918,10 +1922,11 @@ class Equinox extends Fortuna {
 				this.undoMove(true)
 			}
 
-			let bestMove = moveEvals.findIndex(v => v === (this.turn ? max(moveEvals) : min(moveEvals)))
+			let bestEval = this.turn ? max(moveEvals) : min(moveEvals)
+			let bestIndices = moveEvals.map((v, i) => {if (v === bestEval) {return i}}).filter(v => v !== undefined)
 
 			promiseDB = true
-			resolve(moves[bestMove])
+			resolve(moves[random(bestIndices)])
 		})
 	}
 }
