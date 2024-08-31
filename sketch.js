@@ -8,19 +8,23 @@ const descCustom = "Chess, but you set up the starting position. Play with a fri
 
 let startFEN = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR"
 let newFEN = "rn1qkb1r/pp2pppp/2p2n2/5b2/P1pP3N/2N5/1P2PPPP/R1BQKB1R"
+let testFENs = [
+	"rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR", // w KQkq - 0 1
+	"r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R", // w KQkq -
+	"8/2p5/3p4/KP5r/1R3p1k/8/4P1P1/8", // w - -
+	"r3k2r/Pppp1ppp/1b3nbN/nP6/BBP1P3/q4N2/Pp1P2PP/R2Q1RK1", // w kq - 0 1
+	"rnbq1k1r/pp1Pbppp/2p5/8/2B5/8/PPP1NnPP/RNBQK2R", // w KQ - 1 8
+]
 
-// let FEN1 = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR" // w KQkq - 0 1
-// let FEN2 = "r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R" // w KQkq -
-// let FEN3 = "8/2p5/3p4/KP5r/1R3p1k/8/4P1P1/8" // w - -
-// let FEN4 = "r3k2r/Pppp1ppp/1b3nbN/nP6/BBP1P3/q4N2/Pp1P2PP/R2Q1RK1" // w kq - 0 1
-// let FEN5 = "rnbq1k1r/pp1Pbppp/2p5/8/2B5/8/PPP1NnPP/RNBQK2R" // w KQ - 1 8
 
 // let t1 = new Date().getTime()
-// console.log(new Chess(FEN1).moveTest(1), (new Date().getTime() - t1)/1000)
+// console.log(new Chess(testFENs[0]).moveTest(1), (new Date().getTime() - t1)/1000)
 
 let winFEN = "rnb1kbnr/pppp1ppp/8/4p3/6Pq/5P2/PPPPP2P/RNBQKBNR"
+let results = []
+let gameCount = 0
 
-let backTime = 0, backStartTime = 0
+let backTime = 0, backMenuStartTime = 0, backCreditsStartTime = 0
 let clickedTime = 0
 let transitionDuration = 500
 let promiseDB = true
@@ -29,7 +33,7 @@ let mouseBuffer = [false, false, false]
 let menuDebounce = true, backDebounce = true
 let decile, game, time
 let mode = "menu"
-let players = ["Human", "Fortuna", "Equinox", "Astor", "Lazaward", "Aleph"]
+let players = ["Human", "Fortuna", "Astor", "Lazaward", "Aleph"]
 let wPlayer = 1, bPlayer = 1
 let menuPreset = ["Standard", descStandard, [51, 153, 255], [0, 77, 153], [0, 34, 102]]
 
@@ -93,6 +97,7 @@ function setup() {
 	createCanvas(windowWidth, windowHeight)
 	textFont(kodeMono)
 	game = new Chess(newFEN)
+	//game = new Chess(startFEN, players[3-1], players[3-1])
 
 	backButton = createDiv("Back")
 	backButton.style(menuButtonStyle + `
@@ -179,6 +184,12 @@ function setup() {
 			"top": "Classic",
 			"middle": "Rhythm",
 			"bottom": "Solo"
+		},
+
+		"Credits": {
+			"top": "Secret",
+			"middle": "Easter",
+			"bottom": "Egg"
 		}
 	}
 	timeInputs = {
@@ -192,6 +203,11 @@ function setup() {
 	transitionDivs = {
 		"div1": createDiv(),
 		"div2": createDiv()
+	}
+	colourSliders = {
+		"red": createSlider(0, 255),
+		"green": createSlider(0, 255),
+		"blue": createSlider(0, 255)
 	}
 
 	for (let box in timeInputs) {
@@ -228,16 +244,14 @@ function draw() {
 
 	game.draw()
 
-	if (mode === "start" || time <= backStartTime + 500) {drawMenu(...menuPreset)} else {
+	if (mode === "start" || time <= backMenuStartTime + 500) {drawMenu(...menuPreset)} else {
 		for (let box in timeInputs) {
 			timeInputs[box].position(-windowWidth, -windowHeight)
 			timeInputs[box].size(decile*0.75, decile*0.75)
 		}
 	}
 
-	// transitionDivs["div2"].position(0, windowHeight-50)
-	// transitionDivs["div2"].size(100, 100)
-	// transitionDivs["div2"].style(`background-color: black; transform-origin: 0px ${50}px; transform: rotate(-45deg)`)
+	if (buttons.divs["top"].html() === "Secret" || time <= backCreditsStartTime + 500) {drawCredits()}
 
 	for (let div in buttons.divs) {
 		buttons.divs[div].mouseOver(mouseHover)
@@ -248,12 +262,16 @@ function draw() {
 	backButton.mouseOut(mouseNotHover)
 	backButton.mousePressed(mouseClickedElement)
 
+	drawColourPicker()
+
 	transition(clickedTime, transitionDuration, ...currentTransition)
+
+	//botTest(3, 3, 100)
 }
 
 function drawMenu(title, desc, colour1, colour2, colour3) {
 	let offset = decile/10
-	let alpha = (mode === "start") ? 255 : 255 - (255 * factor(backStartTime, 500, "sine"))
+	let alpha = (mode === "start") ? 255 : 255 - (255 * factor(backMenuStartTime, 500, "sine"))
 
 	timeInputs["wMins"].position(windowWidth*0.1775 - decile*1.45, decile*5.975)
 	timeInputs["wSecs"].position(windowWidth*0.1775 - decile*0.45, decile*5.975)
@@ -392,14 +410,14 @@ function drawMenu(title, desc, colour1, colour2, colour3) {
 	textSize(decile*0.6)
 	text(">", windowWidth*0.28, decile*4.9)
 	pop()
-	text(`(${wPlayer}/6)`, windowWidth*0.305, decile*4)
+	text(`(${wPlayer}/5)`, windowWidth*0.305, decile*4)
 	text("?", windowWidth*0.305, decile*5.7)
 	fill(0, alpha)
 	push()
 	textSize(decile*0.6)
 	text(">", windowWidth*0.625, decile*4.9)
 	pop()
-	text(`(${bPlayer}/6)`, windowWidth*0.65, decile*4)
+	text(`(${bPlayer}/5)`, windowWidth*0.65, decile*4)
 	text("?", windowWidth*0.65, decile*5.7)
 
 	textAlign(CENTER)
@@ -450,6 +468,92 @@ function drawMenu(title, desc, colour1, colour2, colour3) {
 		text("\n\n\n\n\n\n  =          \n\n\n\n", mouseX+windowWidth*0.155-decile*0.25, mouseY-decile*2.25)
 	}
 	pop()
+}
+
+function drawCredits() {
+	let alpha = (buttons.divs["top"].html() === "Secret") ? 255 : 255 - (255 * factor(backCreditsStartTime, 500, "sine"))
+	push()
+	rectMode(CORNER)
+	strokeWeight(0)
+
+	fill(0, alpha) // shadow thingy
+	rect(decile*9, decile, decile*0.125, decile*0.125)
+
+	fill(150, 100, 215, alpha) // main background
+	rect(decile*9.125, decile, decile*7, decile*1.5)
+	rect(decile*9.125, decile*2.5, windowWidth-decile*9.25, decile*6.5)
+	triangle(decile*16.12, decile, decile*16.12, decile*2.5, decile*17, decile*2.5)
+	triangle(decile*16.12, decile*1.5, decile*16.12, decile*2.5, decile*19, decile*2.5)
+	triangle(decile*16.12, decile*2, decile*16.12, decile*2.5, windowWidth-decile*0.125, decile*2.51)
+
+	rectMode(CORNERS) // darkest shade
+	fill(100, 50, 175, alpha)
+	rect(decile*9.35, decile*2.5, windowWidth-decile*5, decile*2.65)
+	triangle(windowWidth-decile*5, decile*2.5, windowWidth-decile*4.85, decile*2.5, windowWidth-decile*5, decile*2.65)
+
+	rect(decile*15.5, decile*1.1, decile*15.6, decile*2.25)
+	rect(decile*9.325, decile*3.1, windowWidth-decile*0.35, decile*6.85)
+	rect(decile*9.325, decile*7.7, windowWidth-decile*0.35, decile*8.85)
+
+	fill(200, 150, 255, alpha) // text highlight colour
+	rect(decile*9.225, decile*1.1, decile*15.5, decile*2.25)
+	rect(decile*9.225, decile*3, windowWidth-decile*0.25, decile*6.75)
+	rect(decile*9.225, decile*7.6, windowWidth-decile*0.25, decile*8.75)
+
+
+	fill(100, 50, 175, alpha) // underlining the word "You"
+	rect(decile*12.5, decile*8.5, decile*13.75, decile*8.6)
+
+
+	fill(53, 30, 100, alpha)
+	textSize(decile)
+	text("Thanks to:", decile*9.25, decile*2)
+	textSize(decile*0.75)
+	text("p5.js - Graphics Library\nPixabay - Sound Effects\nCBurnett - Chess Pieces\nKode Mono - Text Font\n\n...and YOU, for playing!", decile*9.25, decile*3.75)
+	pop()
+}
+
+function drawColourPicker() {
+	push()
+	rectMode(CENTER)
+	strokeWeight(0)
+	fill(200)
+	rect(windowWidth/2, decile*5, decile*5, decile*7.5, decile/2)
+
+	fill(colourSliders["red"].value(), colourSliders["green"].value(), colourSliders["blue"].value())
+	rect(windowWidth/2, decile*3.75, decile*4.5, decile*4.5, decile/3)
+
+	for (let slider in colourSliders) {
+		colourSliders[slider].style(`width: 35vh; accent-color: ${slider}`)
+	}
+
+	colourSliders["red"].position(windowWidth/2 - decile*2.25, decile*6.25)
+	colourSliders["green"].position(windowWidth/2 - decile*2.25, decile*6.75)
+	colourSliders["blue"].position(windowWidth/2 - decile*2.25, decile*7.25)
+
+	fill(255)
+	fill(102, 171, 42)
+	rect(windowWidth/2 - decile*1.25, decile*8.15, decile*2, decile*0.85, decile/5)
+	fill(201, 1, 3)
+	rect(windowWidth/2 + decile*1.25, decile*8.15, decile*2, decile*0.85, decile/5)
+
+	fill(50)
+	textSize(decile/2)
+	textAlign(CENTER)
+	text("Save", windowWidth/2 - decile*1.25, decile*8.3)
+	text("Exit", windowWidth/2 + decile*1.25, decile*8.3)
+
+
+	textAlign(CENTER, TOP)
+	textSize(decile/4)
+	fill(255, 50, 50)
+	text(colourSliders["red"].value(), windowWidth/2 + decile*1.85, decile*6.25)
+	fill(10, 255, 0)
+	text(colourSliders["green"].value(), windowWidth/2 + decile*1.85, decile*6.75)
+	fill(50, 50, 255)
+	text(colourSliders["blue"].value(), windowWidth/2 + decile*1.85, decile*7.25)
+	pop()
+
 }
 
 function generate960() {
@@ -518,27 +622,23 @@ function mouseClickedElement() {
 
 	if (clickedButton === "Back") { ///// If back button pressed
 		if (mode === "game") {backTime = time}
-		else if (mode === "start") {backStartTime = time}
+		else if (mode === "start") {backMenuStartTime = time}
+		else if (buttons.divs["top"].html() === "Secret") {backCreditsStartTime = time; buttons.divs["top"].html("Secret 2: Electric Boogaloo")}
 		mode = "menu"
 		backDebounce = false
 		sfx["back"].play()
 		if (buttons.divs["top"].html() !== "Play") {
-			let prevButtons
+			let prevButtons = {
+				"top": "Play",
+				"middle": "Puzzles",
+				"bottom": "Credits"
+			}
 			for (let div in buttons.divs) {
 				buttons.divs[div].style("opacity: 0; width: 0vw")
 			}
 
-			switch (buttons.divs["top"].html()) {
-				case "Standard":
-				case "Classic": // Remove back button
-					backButton.style("opacity: 0; background-color: #4A4A4A; width: 0vw; left: 100vw")
-					prevButtons = {
-						"top": "Play",
-						"middle": "Puzzles",
-						"bottom": "Credits"
-					}; break
-			}
-
+			// Remove back button
+			backButton.style("opacity: 0; background-color: #4A4A4A; width: 0vw; left: 100vw")
 
 			setTimeout(() => {
 				menuDebounce = true
@@ -555,9 +655,27 @@ function mouseClickedElement() {
 	} else if (menuDebounce && mode === "menu") {
 		menuDebounce = false
 
-  		if (["Play", "Puzzles"].includes(clickedButton)) { // every other button
+  		if (["Play", "Puzzles", "Credits"].includes(clickedButton)) { // every other button
 			for (let div in buttons.divs) {
 				buttons.divs[div].style("opacity: 0; width: 0vw")
+
+				if (clickedButton === "Credits") { //////// CREDITS TRANSITION
+					clickedTime = time
+					transitionDuration = 750
+					currentTransition = ["fadeIn", "sine"]
+					setTimeout(() => { // Fade out | part, sine //////////////////////// START MENU
+						clickedTime = time
+						currentTransition = ["fadeOut", "cosine"]
+						transitionDuration = 250
+						setTimeout(() => {
+							transitionDivs["div1"].position(0, 0)
+							transitionDivs["div1"].size(0, 0)
+							transitionDivs["div2"].position(0, 0)
+							transitionDivs["div2"].size(0, 0)
+							currentTransition = [null, null]
+						}, 250)
+					}, 750)
+				}
 
 				setTimeout(() => {
 					menuDebounce = true // Bring back back button
@@ -565,8 +683,8 @@ function mouseClickedElement() {
 					for (let v of ["top", "middle", "bottom"]) {
 						let newText = buttons[clickedButton][v]
 						buttons.divs[v].html(newText)
-						buttons.divs[v].style(`opacity: 0.9; background-color: ${buttons.uColour[newText]}; width: ${buttons.width[newText]}vw`)
-					}			
+						buttons.divs[v].style(`opacity: ${clickedButton === "Credits" ? 0 : 0.9}; background-color: ${buttons.uColour[newText]}; width: ${buttons.width[newText]}vw`)
+					}
 				}, 750)
 			}
 		} else if (["Standard", "Chess960", "Custom"].includes(clickedButton)) { ///// Standard Gamemode /////
@@ -609,7 +727,7 @@ function mouseClickedElement() {
 					backButton.style("width: 14vw; left: 85vw; opacity: 0.9; background-color: #4A4A4A")
 				}, 250)
 			}, 250)
-		} else { // In progress gamemodes
+		} else {
 			menuDebounce = true
 			sfx["error"].play()
 		}
@@ -649,7 +767,12 @@ function transition(start, duration, type, style="linear") {
 			break
 
 		case "drop":
-			//rect(0, 0, windowWidth, lerp(0, windowHeight, t))
+			transitionDivs["div1"].position(0, 0)
+			transitionDivs["div1"].size(windowWidth, lerp(0, windowHeight, t))
+			transitionDivs["div1"].style(`background-color: black; transform: rotate(0deg); transform-origin: center;`)
+
+			transitionDivs["div2"].position(0, 0)
+			transitionDivs["div2"].size(0, 0)
 			break
 
 		case "slide":
@@ -875,13 +998,13 @@ function mousePressed() {
 			}, 1750)
 		} else if (decile*4.25 <= mouseY && mouseY <= decile*5.1) { // Switch player.
 			if (windowWidth*0.065 <= mouseX && mouseX <= windowWidth*0.105) {
-				wPlayer = wPlayer === 1 ? 6 : wPlayer-1
+				wPlayer = wPlayer === 1 ? 5 : wPlayer-1
 			} else if (windowWidth*0.25 <= mouseX && mouseX <= windowWidth*0.29) {
-				wPlayer = wPlayer === 6 ? 1 : wPlayer+1
+				wPlayer = wPlayer === 5 ? 1 : wPlayer+1
 			} else if (windowWidth*0.405 <= mouseX && mouseX <= windowWidth*0.445) {
-				bPlayer = bPlayer === 1 ? 6 : bPlayer-1
+				bPlayer = bPlayer === 1 ? 5 : bPlayer-1
 			} else if (windowWidth*0.595 <= mouseX && mouseX <= windowWidth*0.635) {
-				bPlayer = bPlayer === 6 ? 1 : bPlayer+1
+				bPlayer = bPlayer === 5 ? 1 : bPlayer+1
 			}
 		}
 	}
@@ -951,6 +1074,23 @@ function keyPressed() {
 	}
 }
 
+function botTest(plr1, plr2, num) {
+	wPlayer = plr1; bPlayer = plr2
+
+	if (gameCount < num) {
+		if (game.status !== "active") {
+			gameCount++
+			console.log(game.status)
+			if (Object.keys(results).includes(game.status[0])) {
+				results[game.status[0]]++
+			} else {
+				results[game.status[0]] = 1
+			}
+			game.resetBoard()
+		}
+	} console.log(results)
+}
+
 class Chess { // Main Section of Code
 	constructor(fen, wPlayer="Human", bPlayer="Human", wTime=600000, bTime=600000, wIncr=0, bIncr=0, activeColour=true, castleArr=[true, true, true, true], targetSquare=[false, false], halfMoves=0) {
 		this.boardHistory = [this.initiateBoard(fen)]
@@ -979,6 +1119,12 @@ class Chess { // Main Section of Code
 		this.threeFold = []
 		this.lastCapture = [-halfMoves]
 		this.start = true
+		this.rookStartX = this.getBitboards(fen)["R"].map(v => v[0])
+
+		console.log(this.rookStartX)
+
+		console.log(this.tween(1, 1, 4, 4))
+
 	}
 
 	initiateBoard(fen) {
@@ -1797,7 +1943,9 @@ class Chess { // Main Section of Code
 		} return false
 	}
 
-	resetBoard() {this.status = "killed"; game = new Chess(startFEN, players[wPlayer-1], players[bPlayer-1], this.timeToMs(timeInputs["wMins"].value(), timeInputs["wSecs"].value()), this.timeToMs(timeInputs["bMins"].value(), timeInputs["bSecs"].value()), timeInputs["wIncr"].value()*1000, timeInputs["bIncr"].value()*1000)}
+	resetBoard() {
+		this.status = "killed"; game = new Chess(startFEN, players[wPlayer-1], players[bPlayer-1], this.timeToMs(timeInputs["wMins"].value(), timeInputs["wSecs"].value()), this.timeToMs(timeInputs["bMins"].value(), timeInputs["bSecs"].value()), timeInputs["wIncr"].value()*1000, timeInputs["bIncr"].value()*1000)
+	}
 
 	undoMove(query = false) {
 		if ((promiseDB || query) && this.moveHistory.length !== 0) {
