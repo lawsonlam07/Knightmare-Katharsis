@@ -36,6 +36,8 @@ let mode = "menu"
 let players = ["Human", "Fortuna", "Astor", "Lazaward", "Aleph"]
 let wPlayer = 1, bPlayer = 1
 let menuPreset = ["Standard", descStandard, [51, 153, 255], [0, 77, 153], [0, 34, 102]]
+let boardColours = [[200, 150, 255], [100, 50, 175]]
+let colourPickerMode = 0
 
 let menuButtonStyle = `
 	transition: background-color 0.5s, width 0.5s, opacity 0.5s, left 0.5s;
@@ -73,21 +75,22 @@ function preload() {
         "P": loadImage("Pieces/wPawn.png")
     }
 	sfx = {
-		"check": loadSound("SFX/check.mp3"),
-		"move": loadSound("SFX/move.mp3"),
-		"hover": loadSound("SFX/menuHover.mp3"),
-		"click1": loadSound("SFX/menuClick1.mp3"),
-		"click2": loadSound("SFX/menuClick2.mp3"),
-		"click3": loadSound("SFX/menuClick3.mp3"),
-		"error": loadSound("SFX/error.mp3"),
-		"back": loadSound("SFX/back.mp3")
+		"check": createAudio("SFX/check.mp3"),
+		"move": createAudio("SFX/move.mp3"),
+		"hover": createAudio("SFX/menuHover.mp3"),
+		"click1": createAudio("SFX/menuClick1.mp3"),
+		"click2": createAudio("SFX/menuClick2.mp3"),
+		"click3": createAudio("SFX/menuClick3.mp3"),
+		"error": createAudio("SFX/error.mp3"),
+		"back": createAudio("SFX/back.mp3")
 	}
 	songs = {
-		"checkmate": loadSound("Songs/checkmate.mp3")
+		"checkmate": createAudio("Songs/checkmate.mp3")
 	}
 	icons = {
 		"Human": loadImage("Icons/human.png")
 	}
+	settingsImg = loadImage("Icons/settings.png")
 	kodeMono = loadFont("Font/KodeMono.ttf")
 }
 
@@ -209,6 +212,10 @@ function setup() {
 		"green": createSlider(0, 255),
 		"blue": createSlider(0, 255)
 	}
+	volumeSliders = {
+		"music": createSlider(0, 1, 1, 0.01),
+		"sfx": createSlider(0, 1, 1, 0.01)
+	}
 
 	for (let box in timeInputs) {
 		// timeInputs[box].attribute("type", "number")
@@ -234,6 +241,10 @@ function draw() {
 	resizeCanvas(windowWidth, windowHeight)
 
 	clear()
+
+	for (let song in songs) {songs[song].volume(volumeSliders["music"].value())}
+	for (let e in sfx) {sfx[e].volume(volumeSliders["sfx"].value())}
+
 	time = new Date().getTime()
 	decile = min(windowWidth, windowHeight) / 10
 	background(50)
@@ -262,7 +273,11 @@ function draw() {
 	backButton.mouseOut(mouseNotHover)
 	backButton.mousePressed(mouseClickedElement)
 
-	drawColourPicker()
+	if (mode === "menu" && ["Play", "Standard"].includes(buttons.divs["top"].html())) {image(settingsImg, windowWidth-decile*3, decile*7, decile*2, decile*2)}
+	if (mode === "settings") {drawSettings()} else {
+		for (let s in volumeSliders) {volumeSliders[s].position(-windowWidth, 0)}
+		for (let s in colourSliders) {colourSliders[s].position(-windowWidth, 0)}
+	}
 
 	transition(clickedTime, transitionDuration, ...currentTransition)
 
@@ -487,7 +502,7 @@ function drawCredits() {
 	triangle(decile*16.12, decile*2, decile*16.12, decile*2.5, windowWidth-decile*0.125, decile*2.51)
 
 	rectMode(CORNERS) // darkest shade
-	fill(100, 50, 175, alpha)
+	fill(...boardColours[1], alpha)
 	rect(decile*9.35, decile*2.5, windowWidth-decile*5, decile*2.65)
 	triangle(windowWidth-decile*5, decile*2.5, windowWidth-decile*4.85, decile*2.5, windowWidth-decile*5, decile*2.65)
 
@@ -495,13 +510,13 @@ function drawCredits() {
 	rect(decile*9.325, decile*3.1, windowWidth-decile*0.35, decile*6.85)
 	rect(decile*9.325, decile*7.7, windowWidth-decile*0.35, decile*8.85)
 
-	fill(200, 150, 255, alpha) // text highlight colour
+	fill(...boardColours[0], alpha) // text highlight colour
 	rect(decile*9.225, decile*1.1, decile*15.5, decile*2.25)
 	rect(decile*9.225, decile*3, windowWidth-decile*0.25, decile*6.75)
 	rect(decile*9.225, decile*7.6, windowWidth-decile*0.25, decile*8.75)
 
 
-	fill(100, 50, 175, alpha) // underlining the word "You"
+	fill(...boardColours[1], alpha) // underlining the word "You"
 	rect(decile*12.5, decile*8.5, decile*13.75, decile*8.6)
 
 
@@ -513,45 +528,160 @@ function drawCredits() {
 	pop()
 }
 
+function drawSettings(song="The Sound of Nothing") {
+	for (let slider in volumeSliders) {volumeSliders[slider].style(`width: 44vh;`)}
+	push()
+	rectMode(CENTER)
+	textAlign(CENTER)
+	strokeWeight(0)
+
+	fill(50)
+	rect(windowWidth/2, windowHeight/2, windowWidth, windowHeight)
+	fill(155)
+	rect(windowWidth/2, windowHeight/2, windowWidth-decile, decile*9, decile/2)
+
+	fill(125)
+	rect(decile*3.25, decile*1.4, decile*5, decile*1.25, decile/5, 0, 0, decile/5)
+	rect(decile*6.75, decile*1, decile*7, decile*0.03125)
+	rect(decile*6.75, decile*1.2, decile*7, decile*0.0625)
+	rect(decile*6.75, decile*1.4, decile*7, decile*0.125)
+	rect(decile*6.75, decile*1.6, decile*7, decile*0.0625)
+	rect(decile*6.75, decile*1.8, decile*7, decile*0.03125)
+
+	for (let v = 0; v <= 4.5; v += 1.5) {
+		triangle(decile*(5.75+v), decile*2.025, decile*(5.75+v), decile*0.775, decile*(6.375+v), decile*1.4)
+		triangle(decile*(5.75+v), decile*2.025, decile*(5.75+v), decile*1.4, decile*(5.125+v), decile*2.025)
+		triangle(decile*(5.75+v), decile*0.775, decile*(5.75+v), decile*1.4, decile*(5.125+v), decile*0.775)
+	}
+	fill(50)
+	textSize(decile)
+	text("Settings", decile*3.25, decile*1.75)
+
+
+	fill(175)
+	square(windowWidth/2-decile, decile*3.15, decile*1.8)
+	square(windowWidth/2+decile, decile*3.15, decile*1.8)
+	triangle(windowWidth/2-decile*1.9, decile*2.25, windowWidth/2-decile*1.9, decile*4.05, windowWidth/2-decile*2.75, decile*4.05)
+	triangle(windowWidth/2+decile*1.9, decile*2.25, windowWidth/2+decile*1.9, decile*4.05, windowWidth/2+decile*2.75, decile*4.05)
+	triangle(windowWidth/2-decile*0.1, decile*4.05, windowWidth/2-decile*2.75, decile*4.05, windowWidth/2-decile*0.1, decile*4.75)
+	triangle(windowWidth/2+decile*0.1, decile*4.05, windowWidth/2+decile*2.75, decile*4.05, windowWidth/2+decile*0.1, decile*4.75)
+
+	strokeWeight(3); stroke(50)
+	fill(...boardColours[0])
+	square(windowWidth/2-decile, decile*3.15, decile*1.5, decile/8)
+	fill(...boardColours[1])
+	square(windowWidth/2+decile, decile*3.15, decile*1.5, decile/8)
+	strokeWeight(0)
+
+	fill(175) // Board Preview
+	square(windowWidth/2, decile*6.75, decile*3.5, decile/8)
+	rect(windowWidth/2 - decile*2.25, decile*6.75, decile/4, decile*3.5, decile/8)
+	rect(windowWidth/2 + decile*2.25, decile*6.75, decile/4, decile*3.5, decile/8)
+	fill(...boardColours[1])
+	square(windowWidth/2, decile*6.75, decile*3)
+	strokeWeight(0)
+	fill(...boardColours[0])
+	square(windowWidth/2 + decile*0.75, decile*7.5, decile*1.5)
+	square(windowWidth/2 - decile*0.75, decile*6, decile*1.5)
+
+	drawColourPicker(false)
+
+	fill(75)
+	rectMode(CORNER)
+	arc(decile, decile*9, decile, decile, HALF_PI, PI)
+	stroke(75); strokeWeight(1)
+	rect(decile, decile*8.75, windowWidth*0.6-decile, decile*0.75)
+	rect(decile/2, decile*8.75, windowWidth*0.6-decile, decile*0.25)
+	triangle(windowWidth*0.6, decile*8.75, windowWidth*0.6, decile*9.5, windowWidth*0.6+decile*1.25, decile*9.5)
+	strokeWeight(0)
+
+	fill(175)
+	rect(decile*0.75, decile*2.25, decile*5, decile*1.8, decile/8, 0, 0, decile/8)
+	rect(decile*0.75, decile*4.25, decile*5, decile*1.8, decile/8, 0, 0, decile/8)
+	triangle(decile*5.75, decile*2.25, decile*5.75, decile*4.05, decile*6.5, decile*2.5)
+	triangle(decile*5.75, decile*4.25, decile*5.75, decile*6.05, decile*6.5, decile*4.5)
+
+	fill(250, 50, 50) // Reset Defaults Button
+	rect(decile*0.75, decile*6.55, decile*4.75, decile*1.8, decile/10)
+	fill(155); stroke(155); strokeWeight(2)
+	triangle(decile*0.75, decile*7.6, decile*0.75, decile*8.35, decile*1.75, decile*8.35)
+	triangle(decile*5.5, decile*7.2, decile*5.5, decile*6.55, decile*4.5, decile*6.55)
+	strokeWeight(0)
+
+
+
+	textSize(decile/2)
+	textAlign(LEFT)
+	fill(200)
+	text(`Now Playing: ${song}`, decile, decile*9.3)
+
+	fill(75)
+	textSize(decile*0.66)
+	text("Music Volume", decile*0.875, decile*3)
+	text("SFX Volume", decile*0.875, decile*5)
+	fill(150, 1, 3)
+	text("Restore\n   Defaults", decile*0.875, decile*7.25)
+
+	textAlign(CENTER, CENTER)
+	strokeWeight(3); stroke(50)
+	fill(255)
+	text("Board\nPreview", windowWidth/2, decile*6.75)
+
+	textSize(decile/5); strokeWeight(1)
+	fill(75)
+	text("Lighter\nBoard\nColour", windowWidth/2-decile, decile*3.125)
+	fill(175)
+	text("Darker\nBoard\nColour", windowWidth/2+decile, decile*3.125)
+
+	volumeSliders["music"].position(decile, decile*3.5)
+	volumeSliders["sfx"].position(decile, decile*5.5)
+	pop()
+}
+
 function drawColourPicker() {
+	let offset = windowWidth/2 - decile*3.75
 	push()
 	rectMode(CENTER)
 	strokeWeight(0)
 	fill(200)
-	rect(windowWidth/2, decile*5, decile*5, decile*7.5, decile/2)
+	rect(windowWidth/2 + offset, decile*5, decile*5, decile*7.5, decile/2)
 
 	fill(colourSliders["red"].value(), colourSliders["green"].value(), colourSliders["blue"].value())
-	rect(windowWidth/2, decile*3.75, decile*4.5, decile*4.5, decile/3)
+	rect(windowWidth/2 + offset, decile*3.75, decile*4.5, decile*4.5, decile/3)
 
-	for (let slider in colourSliders) {
-		colourSliders[slider].style(`width: 35vh; accent-color: ${slider}`)
+	for (let slider in colourSliders) {colourSliders[slider].style(`width: 35vh; accent-color: ${slider}`)}
+
+	colourSliders["red"].position(windowWidth/2 + offset - decile*2.25, decile*6.25)
+	colourSliders["green"].position(windowWidth/2 + offset - decile*2.25, decile*6.75)
+	colourSliders["blue"].position(windowWidth/2 + offset - decile*2.25, decile*7.25)
+
+	if (colourPickerMode) {
+		fill(102, 171, 42)
+		rect(windowWidth/2 + offset - decile*1.25, decile*8.15, decile*2, decile*0.85, decile/5)
+		fill(201, 1, 3)
+		rect(windowWidth/2 + offset + decile*1.25, decile*8.15, decile*2, decile*0.85, decile/5)
+
+		fill(50)
+		textSize(decile/2)
+		textAlign(CENTER)
+		text("Save", windowWidth/2 + offset - decile*1.25, decile*8.3)
+		text("Exit", windowWidth/2 + offset + decile*1.25, decile*8.3)
+	} else {
+		fill(50)
+		textSize(decile/2)
+		textAlign(CENTER)
+		text("Nothing Selected", windowWidth/2 + offset, decile*8.3)
 	}
-
-	colourSliders["red"].position(windowWidth/2 - decile*2.25, decile*6.25)
-	colourSliders["green"].position(windowWidth/2 - decile*2.25, decile*6.75)
-	colourSliders["blue"].position(windowWidth/2 - decile*2.25, decile*7.25)
-
-	fill(255)
-	fill(102, 171, 42)
-	rect(windowWidth/2 - decile*1.25, decile*8.15, decile*2, decile*0.85, decile/5)
-	fill(201, 1, 3)
-	rect(windowWidth/2 + decile*1.25, decile*8.15, decile*2, decile*0.85, decile/5)
-
-	fill(50)
-	textSize(decile/2)
-	textAlign(CENTER)
-	text("Save", windowWidth/2 - decile*1.25, decile*8.3)
-	text("Exit", windowWidth/2 + decile*1.25, decile*8.3)
 
 
 	textAlign(CENTER, TOP)
 	textSize(decile/4)
-	fill(255, 50, 50)
-	text(colourSliders["red"].value(), windowWidth/2 + decile*1.85, decile*6.25)
-	fill(10, 255, 0)
-	text(colourSliders["green"].value(), windowWidth/2 + decile*1.85, decile*6.75)
-	fill(50, 50, 255)
-	text(colourSliders["blue"].value(), windowWidth/2 + decile*1.85, decile*7.25)
+	fill(255, 0, 0)
+	text(colourSliders["red"].value(), windowWidth/2 + offset + decile*1.85, decile*6.25)
+	fill(0, 128, 0)
+	text(colourSliders["green"].value(), windowWidth/2 + offset + decile*1.85, decile*6.75)
+	fill(0, 0, 255)
+	text(colourSliders["blue"].value(), windowWidth/2 + offset + decile*1.85, decile*7.25)
 	pop()
 
 }
@@ -1007,6 +1137,49 @@ function mousePressed() {
 				bPlayer = bPlayer === 5 ? 1 : bPlayer+1
 			}
 		}
+	} else if (mode === "settings") {
+		if (decile*2.4 <= mouseY && mouseY <= decile*3.9) {
+			if (windowWidth/2 - decile*1.75 <= mouseX && mouseX <= windowWidth/2 - decile*0.25) {
+				colourPickerMode = 1
+				colourSliders["red"].value(boardColours[0][0])
+				colourSliders["green"].value(boardColours[0][1])
+				colourSliders["blue"].value(boardColours[0][2])
+			} else if (windowWidth/2 + decile*0.25 <= mouseX && mouseX <= windowWidth/2 + decile*1.75) {
+				colourPickerMode = 2
+				colourSliders["red"].value(boardColours[1][0])
+				colourSliders["green"].value(boardColours[1][1])
+				colourSliders["blue"].value(boardColours[1][2])
+			}
+
+		} else if (decile*7.725 <= mouseY && mouseY <= decile*8.575 && colourPickerMode) {
+			let colourOffset = windowWidth/2 - decile*3.75
+			if (windowWidth/2 + colourOffset - decile*2.25 <= mouseX && mouseX <= windowWidth/2 + colourOffset - decile*0.25) {
+				if (colourPickerMode === 1) {
+					boardColours[0] = [colourSliders["red"].value(), colourSliders["green"].value(), colourSliders["blue"].value()]
+				} else if (colourPickerMode === 2) {
+					boardColours[1] = [colourSliders["red"].value(), colourSliders["green"].value(), colourSliders["blue"].value()]
+				} colourPickerMode = 0
+			} else if (windowWidth/2 + colourOffset + decile*0.25 <= mouseX && mouseX <= windowWidth/2 + colourOffset + decile*2.25) {
+				colourPickerMode = 0
+			}
+		//rect(decile*0.75, decile*6.55, decile*4.75, decile*1.8, decile/10)
+
+		} else if (decile*0.75 <= mouseX && mouseX <= decile*5.5 && decile*6.55 <= mouseY && mouseY <= decile*8.35) {
+			boardColours = [[200, 150, 255], [100, 50, 175]]
+			for (let s in volumeSliders) {volumeSliders[s].value(1)}
+		}
+
+
+		
+ 	} else if (mode === "menu" && ["Play", "Standard"].includes(buttons.divs["top"].html())) {
+		if (windowWidth-decile*3 <= mouseX && mouseX <= windowWidth-decile && decile*7 <= mouseY && mouseY <= decile*9) {
+			mode = "settings"
+			backButton.style("width: 14vw; left: 85vw; opacity: 0.9; background-color: #4A4A4A")
+			for (let e of ["top", "middle", "bottom"]) {
+				buttons.divs[e].style("width: 0vw; opacity: 0")
+				buttons.divs[e].html("Standard")
+			}
+		}
 	}
 }
 
@@ -1119,12 +1292,6 @@ class Chess { // Main Section of Code
 		this.threeFold = []
 		this.lastCapture = [-halfMoves]
 		this.start = true
-		this.rookStartX = this.getBitboards(fen)["R"].map(v => v[0])
-
-		console.log(this.rookStartX)
-
-		console.log(this.tween(1, 1, 4, 4))
-
 	}
 
 	initiateBoard(fen) {
@@ -1229,7 +1396,6 @@ class Chess { // Main Section of Code
 		this.drawTimer()
 		this.drawIcons()
 		this.drawUtility()
-		this.drawPieceDeficit()
 		if ((windowWidth/windowHeight) >= 1.85) {this.drawNotation()}
 		if (this.mode === "promo") {this.promotionUI()}
 		if (!["active", "finish"].includes(this.status)) {this.drawEndScreen()}
@@ -1296,7 +1462,7 @@ class Chess { // Main Section of Code
 	drawBoard() {
 		for (let x = 1; x <= 8; x++) {
 			for (let y = 1; y <= 8; y++) {
-				let rgb = (x+y) % 2 !== 0 ? [100, 50, 175] : [200, 150, 255]
+				let rgb = (x+y) % 2 !== 0 ? [...boardColours[1]] : [...boardColours[0]]
 				fill(...rgb)
 				square((x*decile), (y*decile), decile)
 			}
@@ -1343,13 +1509,6 @@ class Chess { // Main Section of Code
 		// image(icons[this.blackPlayer], decile*9.35, decile*blackIconPos, decile, decile)
 		pop()
 	}
-
-	drawPieceDeficit() {
-		// push()
-		// imageMode(CENTER)
-		// image(pieces["q"], 11.4*decile, 7.25*decile, decile*1.25, decile*1.25)
-		// pop()
-	} // Finish later innit
 
 	drawUtility() {
 		push()
@@ -1777,7 +1936,7 @@ class Chess { // Main Section of Code
 				legalMoves.push([v[0], v[1]])
 			}
 		} return legalMoves
-	} // FIX CHESS960 HERE <--------------------------------------!!!!!!!
+	}
 
 	handleMove(x1, y1, x2, y2, promo=false, query=false) {
 		let piece = this.board[y1-1][x1-1]
@@ -1898,7 +2057,7 @@ class Chess { // Main Section of Code
 				notation += "+"; if (!query) {sfx["check"].play()}
 			} return [activeBoard, castleArr, locator, notation, passantSquare]
 		} return false
-	} // FIX CHESS960 HERE <--------------    return [{0}activeBoard, {1}castleArr, {2}locator, {3}notation, {4}passantSquare]
+	} // return [{0}activeBoard, {1}castleArr, {2}locator, {3}notation, {4}passantSquare]
 
 	isCheck(x1, y1, colour, locator, activeBoard) {
 		let opposingKing = locator[colour ? "k" : "K"][0]
