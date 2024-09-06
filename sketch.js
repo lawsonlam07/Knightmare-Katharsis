@@ -7,13 +7,13 @@ const desc960 = "Chess, but the starting position is random. Play with a friend,
 const descCustom = "Chess, but you set up the starting position. Play with a friend, or one of the bots!\n\nBefore starting, you can choose who plays as white and black. You must also choose time controls for both players."
 
 let startFEN = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR"
-let newFEN = "rn1qkb1r/pp2pppp/2p2n2/5b2/P1pP3N/2N5/1P2PPPP/R1BQKB1R"
 let testFENs = [
-	"rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR", // w KQkq - 0 1
+	// "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR", // w KQkq - 0 1
 	"r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R", // w KQkq -
-	"8/2p5/3p4/KP5r/1R3p1k/8/4P1P1/8", // w - -
+	// "8/2p5/3p4/KP5r/1R3p1k/8/4P1P1/8", // w - - needs context or breaks game
 	"r3k2r/Pppp1ppp/1b3nbN/nP6/BBP1P3/q4N2/Pp1P2PP/R2Q1RK1", // w kq - 0 1
 	"rnbq1k1r/pp1Pbppp/2p5/8/2B5/8/PPP1NnPP/RNBQK2R", // w KQ - 1 8
+	"rn1qkb1r/pp2pppp/2p2n2/5b2/P1pP3N/2N5/1P2PPPP/R1BQKB1R"
 ]
 
 
@@ -38,6 +38,7 @@ let wPlayer = 1, bPlayer = 1
 let menuPreset = ["Standard", descStandard, [51, 153, 255], [0, 77, 153], [0, 34, 102]]
 let boardColours = [[200, 150, 255], [100, 50, 175]]
 let colourPickerMode = 0
+let customAdvanced = false
 
 let menuButtonStyle = `
 	transition: background-color 0.5s, width 0.5s, opacity 0.5s, left 0.5s;
@@ -99,7 +100,7 @@ function setup() {
 
 	createCanvas(windowWidth, windowHeight)
 	textFont(kodeMono)
-	game = new Chess(newFEN)
+	game = new Chess(random(testFENs))
 	//game = new Chess(startFEN, players[3-1], players[3-1])
 
 	backButton = createDiv("Back")
@@ -203,10 +204,6 @@ function setup() {
 		"bSecs": createInput("00"),
 		"bIncr": createInput("0")
 	}
-	transitionDivs = {
-		"div1": createDiv(),
-		"div2": createDiv()
-	}
 	colourSliders = {
 		"red": createSlider(0, 255),
 		"green": createSlider(0, 255),
@@ -216,9 +213,25 @@ function setup() {
 		"music": createSlider(0, 1, 1, 0.01),
 		"sfx": createSlider(0, 1, 1, 0.01)
 	}
+	customMenu = {
+		"fen": createInput(random(testFENs)),
+		"side": createSlider(0, 1, 0, 1), 
+		"target": createInput("-"),
+		"halfmoves": createInput(0),
+		"fullmoves": createInput(0),
+		"w1": createCheckbox("O-O-O", true),
+		"w2": createCheckbox("O-O", true),
+		"b1": createCheckbox("O-O-O", true),
+		"b2": createCheckbox("O-O", true)
+	}
+	transitionDivs = {
+		"div1": createDiv(),
+		"div2": createDiv()
+	}
+	for (let v of ["w1", "w2", "b1", "b2"]) {customMenu[v].style("color: white")}
+	for (let v in customMenu) {customMenu[v].style("font-family: kodeMono")}
 
 	for (let box in timeInputs) {
-		// timeInputs[box].attribute("type", "number")
 		timeInputs[box].attribute("maxlength", "2")
 		timeInputs[box].style(`font-family: kodeMono, Courier New, Arial, serif; background-color: rgba(0, 0, 0, 0); 
 		font-size: 5vh; border: none; border-radius: 5px; text-align: center; overflow: auto;
@@ -238,6 +251,7 @@ function setup() {
 }
 
 function draw() {
+	if (mode !== "start") {for (let v in customMenu) {customMenu[v].position(-windowWidth, 0)}}
 	resizeCanvas(windowWidth, windowHeight)
 
 	clear()
@@ -391,7 +405,7 @@ function drawMenu(title, desc, colour1, colour2, colour3) {
 	textAlign(CORNER)
 	rectMode(CORNERS)
 	strokeWeight(1)
-	text(desc + "\n\n\n" + descHotkeys, windowWidth*0.7+decile/4, 2.5*decile, windowWidth*0.3-decile/4, decile*7.5)
+	if (!customAdvanced || title !== "Custom") {text(desc + "\n\n\n" + descHotkeys, windowWidth*0.7+decile/4, 2.5*decile, windowWidth*0.3-decile/4, decile*7.5)}
 
 	textSize(decile*0.75)
 	textAlign(CENTER)
@@ -482,6 +496,65 @@ function drawMenu(title, desc, colour1, colour2, colour3) {
 		text("\n\n\n\n\n  =        \n\n\n\n\n", mouseX+windowWidth*0.155-decile*0.25, mouseY-decile*2.25)
 		text("\n\n\n\n\n\n  =          \n\n\n\n", mouseX+windowWidth*0.155-decile*0.25, mouseY-decile*2.25)
 	}
+
+	if (title === "Custom" && mode === "start") {
+		push()
+		fill(40, 126, 63)
+		strokeWeight(0)
+		rect(windowWidth*0.21, decile*9.2, decile*3.75, decile*0.5, decile/8)
+		triangle(windowWidth*0.025, decile*8.95, windowWidth*0.025, decile*9.45, windowWidth*0.025 + decile/2, decile*9.45)
+		triangle(windowWidth*0.395, decile*8.95, windowWidth*0.395, decile*9.45, windowWidth*0.395 - decile/2, decile*9.45)
+		pop()
+
+		textAlign(CORNER)
+		text("FEN:", windowWidth*0.025, decile*8.125)
+		text("Side to Move: White", windowWidth*0.025, decile*8.625)
+		textAlign(CENTER)
+		text("Advanced Settings", windowWidth*0.21, decile*9.125)
+		textAlign(RIGHT)
+		text("Black", windowWidth*0.395, decile*8.625)
+		customMenu["fen"].position(windowWidth*0.075, decile*7.85)
+		customMenu["fen"].size(windowWidth*0.3125, decile*0.5)
+		customMenu["fen"].style("background-color: #287E3F")
+		customMenu["side"].position(windowWidth*0.025 + decile*4.2, decile*8.5)
+		customMenu["side"].size((windowWidth*0.395-decile*1.8) - (windowWidth*0.025 + decile*3.85))
+
+		if (customAdvanced) {
+			textAlign(LEFT)
+			text("Passant Square:", windowWidth*0.7+decile*0.25, decile*3.5)
+			text("Fullmoves:", windowWidth*0.7+decile*0.25, decile*4.25)
+			text("Halfmoves:", windowWidth*0.7+decile*0.25, decile*5)
+			text("If you don't understand any of this, you can look up 'Forsyth-Edwards Notation' on Wikipedia. If you break the game here, it's on you.", windowWidth*0.85 - decile*0.025, decile*8.5, windowWidth*0.275)
+
+			textSize(decile/2)
+			text("White", windowWidth*0.7+decile*0.75, decile*5.75)
+			textAlign(RIGHT)
+			text("Black", windowWidth-decile*0.8, decile*5.75)
+			textAlign(CENTER)
+			text("Advanced Settings", windowWidth*0.85 - decile*0.025, decile*2.5)
+			fill(...colour3, alpha)
+			strokeWeight(0)
+			rect(windowWidth*0.85 - decile*0.025, decile*3, windowWidth*0.3-decile, decile*0.125)
+			customMenu["target"].position(windowWidth*0.7+decile*3.4, decile*3.3)
+			customMenu["target"].size(decile/12*5, decile/12*5)			
+			customMenu["fullmoves"].position(windowWidth*0.7+decile*2.4, decile*4.05)
+			customMenu["fullmoves"].size(decile/12*5, decile/12*5)
+			customMenu["halfmoves"].position(windowWidth*0.7+decile*2.4, decile*4.8)
+			customMenu["halfmoves"].size(decile/12*5, decile/12*5)
+			customMenu["w1"].position(windowWidth*0.7+decile*0.75, decile*6.25)
+			customMenu["w2"].position(windowWidth*0.7+decile*0.75, decile*6.75)
+			customMenu["b1"].position(windowWidth-decile*2.25, decile*6.25)
+			customMenu["b2"].position(windowWidth-decile*2.25, decile*6.75)
+		} else {
+			customMenu["target"].position(-windowWidth, 0)
+			customMenu["halfmoves"].position(-windowWidth, 0)
+			customMenu["fullmoves"].position(-windowWidth, 0)
+			customMenu["w1"].position(-windowWidth, 0)
+			customMenu["w2"].position(-windowWidth, 0)
+			customMenu["b1"].position(-windowWidth, 0)
+			customMenu["b2"].position(-windowWidth, 0)
+		}
+	}
 	pop()
 }
 
@@ -502,7 +575,7 @@ function drawCredits() {
 	triangle(decile*16.12, decile*2, decile*16.12, decile*2.5, windowWidth-decile*0.125, decile*2.51)
 
 	rectMode(CORNERS) // darkest shade
-	fill(...boardColours[1], alpha)
+	fill(100, 50, 175, alpha)
 	rect(decile*9.35, decile*2.5, windowWidth-decile*5, decile*2.65)
 	triangle(windowWidth-decile*5, decile*2.5, windowWidth-decile*4.85, decile*2.5, windowWidth-decile*5, decile*2.65)
 
@@ -510,13 +583,13 @@ function drawCredits() {
 	rect(decile*9.325, decile*3.1, windowWidth-decile*0.35, decile*6.85)
 	rect(decile*9.325, decile*7.7, windowWidth-decile*0.35, decile*8.85)
 
-	fill(...boardColours[0], alpha) // text highlight colour
+	fill(200, 150, 255, alpha) // text highlight colour
 	rect(decile*9.225, decile*1.1, decile*15.5, decile*2.25)
 	rect(decile*9.225, decile*3, windowWidth-decile*0.25, decile*6.75)
 	rect(decile*9.225, decile*7.6, windowWidth-decile*0.25, decile*8.75)
 
 
-	fill(...boardColours[1], alpha) // underlining the word "You"
+	fill(100, 50, 175, alpha) // underlining the word "You"
 	rect(decile*12.5, decile*8.5, decile*13.75, decile*8.6)
 
 
@@ -556,7 +629,6 @@ function drawSettings(song="The Sound of Nothing") {
 	fill(50)
 	textSize(decile)
 	text("Settings", decile*3.25, decile*1.75)
-
 
 	fill(175)
 	square(windowWidth/2-decile, decile*3.15, decile*1.8)
@@ -607,8 +679,6 @@ function drawSettings(song="The Sound of Nothing") {
 	triangle(decile*0.75, decile*7.6, decile*0.75, decile*8.35, decile*1.75, decile*8.35)
 	triangle(decile*5.5, decile*7.2, decile*5.5, decile*6.55, decile*4.5, decile*6.55)
 	strokeWeight(0)
-
-
 
 	textSize(decile/2)
 	textAlign(LEFT)
@@ -1003,6 +1073,16 @@ function getRankandFileFromMouse(x, y) {
 	return [false, false]
 }
 
+function convertAlgebraic(coord) {
+    coord = coord.toLowerCase()
+    let x = coord.slice(0).charCodeAt() - 96
+    let y = 9 - Number(coord.slice(1))
+    
+    if (max(x, y) > 8 || min(x, y) < 1 || coord.length !== 2 || isNaN(y)) {
+        return [false, false]
+    } return [x, y]
+}
+
 function mousePressed() {
 	let [rank, file] = getRankandFileFromMouse(mouseX, mouseY)
 	if (!rank || !file) {mouseBuffer = [false, false, false]}
@@ -1072,8 +1152,11 @@ function mousePressed() {
 		} if (rank && file) {game.move = game.boardHistory.length - 1}
 	
 	} else if (mode === "start") {
+		//rect(windowWidth*0.21, decile*9.2, decile*3.75, decile*0.5, decile/8)
+		if (menuPreset[0] === "Custom" && windowWidth*0.21 - decile*1.875 <= mouseX && mouseX <= windowWidth*0.21 + decile*1.875 && decile*8.95 <= mouseY && mouseY <= decile*9.45) {customAdvanced = !customAdvanced}
+
 		if (menuDebounce && windowWidth*0.4225 <= mouseX && mouseX <= windowWidth*0.6225 && decile*7.75 <= mouseY && mouseY <= decile*9.55) {
-			menuDebounce = false
+			menuDebounce = false // Start Button
 			sfx["click3"].play()
 			clickedTime = time
 			transitionDuration = 1500
@@ -1117,7 +1200,7 @@ function mousePressed() {
 					game = new Chess(startFEN, players[wPlayer-1], players[bPlayer-1], game.timeToMs(timeInputs["wMins"].value(), timeInputs["wSecs"].value()), game.timeToMs(timeInputs["bMins"].value(), timeInputs["bSecs"].value()), timeInputs["wIncr"].value()*1000, timeInputs["bIncr"].value()*1000)
 					currentTransition = ["part", "sine"]
 				} else {
-					game = new Chess(startFEN, players[wPlayer-1], players[bPlayer-1], game.timeToMs(timeInputs["wMins"].value(), timeInputs["wSecs"].value()), game.timeToMs(timeInputs["bMins"].value(), timeInputs["bSecs"].value()), timeInputs["wIncr"].value()*1000, timeInputs["bIncr"].value()*1000)
+					game = new Chess(customMenu["fen"].value(), players[wPlayer-1], players[bPlayer-1], game.timeToMs(timeInputs["wMins"].value(), timeInputs["wSecs"].value()), game.timeToMs(timeInputs["bMins"].value(), timeInputs["bSecs"].value()), timeInputs["wIncr"].value()*1000, timeInputs["bIncr"].value()*1000, !customMenu["side"].value(), [customMenu["w1"].checked(), customMenu["w2"].checked(), customMenu["b1"].checked(), customMenu["b2"].checked()], convertAlgebraic(customMenu["target"].value()), Number(customMenu["halfmoves"].value()), Number(customMenu["fullmoves"].value()))
 					currentTransition = ["pull", "sine"]
 				}			
 				setTimeout(() => {
@@ -1265,7 +1348,7 @@ function botTest(plr1, plr2, num) {
 }
 
 class Chess { // Main Section of Code
-	constructor(fen, wPlayer="Human", bPlayer="Human", wTime=600000, bTime=600000, wIncr=0, bIncr=0, activeColour=true, castleArr=[true, true, true, true], targetSquare=[false, false], halfMoves=0) {
+	constructor(fen, wPlayer="Human", bPlayer="Human", wTime=600000, bTime=600000, wIncr=0, bIncr=0, activeColour=true, castleArr=[true, true, true, true], targetSquare=[false, false], halfMoves=0, fullmoves=0) {
 		this.boardHistory = [this.initiateBoard(fen)]
 		this.bitboards = [this.getBitboards(fen)]
 		this.board = this.initiateBoard(fen)
@@ -1274,7 +1357,7 @@ class Chess { // Main Section of Code
 		this.passantHistory = [[...targetSquare]]
 		this.highlightSquares = []
 		this.arrowSquares = []
-		this.moveHistory = []
+		this.moveHistory = activeColour ? [] : ["-"]
 		this.whiteTimeHistory = [wTime]
 		this.blackTimeHistory = [wTime]
 		this.whiteTime = wTime
@@ -1291,6 +1374,7 @@ class Chess { // Main Section of Code
 		this.status = "active"
 		this.threeFold = []
 		this.lastCapture = [-halfMoves]
+		this.moveCount = fullmoves
 		this.start = true
 	}
 
@@ -1578,7 +1662,7 @@ class Chess { // Main Section of Code
 
 			fill(isWhiteCurrentMove || isBlackCurrentMove ? 255 : 200, alpha)
 			textSize(windowHeight*(6/100))
-			text(i+1, (decile * 15.25 + (windowWidth - decile * 1.75))/2, decile * (0.75*(i-offset)+2.5))
+			text(i+1+this.moveCount, (decile * 15.25 + (windowWidth - decile * 1.75))/2, decile * (0.75*(i-offset)+2.5))
 		}
 		pop()
 	}
