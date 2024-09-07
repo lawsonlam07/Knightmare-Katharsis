@@ -36,9 +36,10 @@ let mode = "menu"
 let players = ["Human", "Fortuna", "Astor", "Lazaward", "Aleph"]
 let wPlayer = 1, bPlayer = 1
 let menuPreset = ["Standard", descStandard, [51, 153, 255], [0, 77, 153], [0, 34, 102]]
-let boardColours = [[200, 150, 255], [100, 50, 175]]
+let boardColours = [[200, 200, 200], [160, 100, 60]]
 let colourPickerMode = 0
 let customAdvanced = false
+let songCounter = 0
 
 let menuButtonStyle = `
 	transition: background-color 0.5s, width 0.5s, opacity 0.5s, left 0.5s;
@@ -76,17 +77,26 @@ function preload() {
         "P": loadImage("Pieces/wPawn.png")
     }
 	sfx = {
-		"check": createAudio("SFX/check.mp3"),
-		"move": createAudio("SFX/move.mp3"),
-		"hover": createAudio("SFX/menuHover.mp3"),
-		"click1": createAudio("SFX/menuClick1.mp3"),
-		"click2": createAudio("SFX/menuClick2.mp3"),
-		"click3": createAudio("SFX/menuClick3.mp3"),
-		"error": createAudio("SFX/error.mp3"),
-		"back": createAudio("SFX/back.mp3")
+		"check": loadSound("SFX/check.mp3"),
+		"move": loadSound("SFX/move.mp3"),
+		"hover": loadSound("SFX/menuHover.mp3"),
+		"click1": loadSound("SFX/menuClick1.mp3"),
+		"click2": loadSound("SFX/menuClick2.mp3"),
+		"click3": loadSound("SFX/menuClick3.mp3"),
+		"error": loadSound("SFX/error.mp3"),
+		"back": loadSound("SFX/back.mp3")
 	}
 	songs = {
-		"checkmate": createAudio("Songs/checkmate.mp3")
+		// "Kirara Magic - Checkmate": loadSound("Songs/Checkmate.mp3"),
+		// "KLYDIX - Dream Flower": loadSound("Songs/Dream Flower.mp3"),
+		"Tobu - Escape": loadSound("Songs/Escape.mp3"),
+		"Xomu - Last Dance": loadSound("Songs/Last Dance.mp3"),
+		"Sakuzyo - Lost Memory": loadSound("Songs/Lost Memory.mp3"),
+		"EspiDev - Parfait": loadSound("Songs/Parfait.mp3"),
+		"PIKASONIC - Relive": loadSound("Songs/Relive.mp3"),
+		// "megawolf77 - Shining Sprinter": loadSound("Songs/Shining Sprinter.mp3"),
+		// "F-777 - Stay Tuned": loadSound("Songs/Stay Tuned.mp3"),
+		// "BuildCastlesInAir - Untitled Song": loadSound("Songs/Untitled Song.mp3"),
 	}
 	icons = {
 		"Human": loadImage("Icons/human.png")
@@ -96,7 +106,10 @@ function preload() {
 }
 
 function setup() {
-	// songs["checkmate"].loop()
+	for (let s in songs) {songs[s].onended(audioHandler)}
+	playlist = shuffle(Object.keys(songs))
+	playingSong = playlist[0]
+	songs[playingSong].play()
 
 	createCanvas(windowWidth, windowHeight)
 	textFont(kodeMono)
@@ -256,8 +269,8 @@ function draw() {
 
 	clear()
 
-	for (let song in songs) {songs[song].volume(volumeSliders["music"].value())}
-	for (let e in sfx) {sfx[e].volume(volumeSliders["sfx"].value())}
+	for (let song in songs) {songs[song].setVolume(volumeSliders["music"].value())}
+	for (let e in sfx) {sfx[e].setVolume(volumeSliders["sfx"].value())}
 
 	time = new Date().getTime()
 	decile = min(windowWidth, windowHeight) / 10
@@ -296,6 +309,12 @@ function draw() {
 	transition(clickedTime, transitionDuration, ...currentTransition)
 
 	//botTest(3, 3, 100)
+}
+
+function audioHandler() {
+	songCounter++
+	playingSong = playlist[songCounter % playlist.length]
+	songs[playingSong].play()
 }
 
 function drawMenu(title, desc, colour1, colour2, colour3) {
@@ -601,7 +620,7 @@ function drawCredits() {
 	pop()
 }
 
-function drawSettings(song="The Sound of Nothing") {
+function drawSettings() {
 	for (let slider in volumeSliders) {volumeSliders[slider].style(`width: 44vh;`)}
 	push()
 	rectMode(CENTER)
@@ -683,7 +702,7 @@ function drawSettings(song="The Sound of Nothing") {
 	textSize(decile/2)
 	textAlign(LEFT)
 	fill(200)
-	text(`Now Playing: ${song}`, decile, decile*9.3)
+	text(`Now Playing: ${playingSong}`, decile, decile*9.3)
 
 	fill(75)
 	textSize(decile*0.66)
@@ -859,11 +878,15 @@ function mouseClickedElement() {
 			for (let div in buttons.divs) {
 				buttons.divs[div].style("opacity: 0; width: 0vw")
 
-				if (clickedButton === "Credits") { //////// CREDITS TRANSITION
+				if (clickedButton === "Puzzles") { // ##################### EDITING HERE #####################
+
+					
+					console.log("hi")
+				} else if (clickedButton === "Credits") { //////// CREDITS TRANSITION
 					clickedTime = time
 					transitionDuration = 750
 					currentTransition = ["fadeIn", "sine"]
-					setTimeout(() => { // Fade out | part, sine //////////////////////// START MENU
+					setTimeout(() => {
 						clickedTime = time
 						currentTransition = ["fadeOut", "cosine"]
 						transitionDuration = 250
@@ -908,7 +931,7 @@ function mouseClickedElement() {
 				buttons.divs[v].style(`opacity: 0; background-color: ${buttons.uColour[newText]}; width: 0vw`)
 			}
 			
-			setTimeout(() => { // Fade out | part, sine //////////////////////// START MENU
+			setTimeout(() => { // Fade out | part, sine | START MENU
 				mode = "start"
 
 				timeInputs["wMins"].value("10"); timeInputs["wSecs"].value("00"); timeInputs["wIncr"].value("0")
