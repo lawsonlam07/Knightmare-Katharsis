@@ -11,7 +11,7 @@ let testFENs = [
 	// "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR", // w KQkq - 0 1
 	"r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R", // w KQkq -
 	// "8/2p5/3p4/KP5r/1R3p1k/8/4P1P1/8", // w - - needs context or breaks game
-	"r3k2r/Pppp1ppp/1b3nbN/nP6/BBP1P3/q4N2/Pp1P2PP/R2Q1RK1", // w kq - 0 1
+	// "r3k2r/Pppp1ppp/1b3nbN/nP6/BBP1P3/q4N2/Pp1P2PP/R2Q1RK1", // w kq - 0 1 breaks game as black
 	"rnbq1k1r/pp1Pbppp/2p5/8/2B5/8/PPP1NnPP/RNBQK2R", // w KQ - 1 8
 	"rn1qkb1r/pp2pppp/2p2n2/5b2/P1pP3N/2N5/1P2PPPP/R1BQKB1R"
 ]
@@ -20,11 +20,10 @@ let testFENs = [
 // let t1 = new Date().getTime()
 // console.log(new Chess(testFENs[0]).moveTest(1), (new Date().getTime() - t1)/1000)
 
-let winFEN = "rnb1kbnr/pppp1ppp/8/4p3/6Pq/5P2/PPPPP2P/RNBQKBNR"
 let results = []
 let gameCount = 0
 
-let backTime = 0, backMenuStartTime = 0, backCreditsStartTime = 0
+let backTime = 0, backMenuStartTime = 0, backCreditsStartTime = 0, backPuzzlesStartTime = 0
 let clickedTime = 0
 let transitionDuration = 500
 let promiseDB = true
@@ -40,6 +39,42 @@ let boardColours = [[200, 200, 200], [160, 100, 60]]
 let colourPickerMode = 0
 let customAdvanced = false
 let songCounter = 0
+
+let puzzleCounter = false
+let puzzlesStartTime = 0
+let puzzleResults = Array(25).fill(null)
+let puzzlesFinish = false
+let puzzlesData = [ // {0} FEN String => {1} Move Notation => {2} Bot Moves => {3} Side to Move
+	["6k1/5p1p/R5pP/1p6/2pP4/4p1K1/3bB1P1/8", ["Ra8+"], [], true],
+	["6k1/5R1p/2N5/1p5p/1P5P/5RPK/8/3q4", ["Qh1+"], [], false],
+	["1k6/pppr1p1p/1q2p1pb/5n2/8/1P6/PQP2PPP/2R2RK1", ["Qh8+", "Rd8", "Qxd8+"], [[4, 2, 4, 1, false]], true], 
+	["r2q1r1k/p3np1p/bp4pP/3p2Q1/3p4/3n1P2/PP1KN1P1/R5NR", ["Qf6+", "Kg8", "Qg7+"], [[8, 1, 7, 1, false]], true],
+	["8/R1Q1nkp1/4p3/3pPp2/5r2/3b4/5P1P/6K1", ["Rg4+", "Kh1", "Be4+", "f3", "Bxf3+"], [[7, 8, 8, 8, false], [6, 7, 6, 6, false]], false],
+	["6k1/2q2pp1/p6p/1p6/8/P3Q1PP/1P3R1K/1r6", ["Qe8+", "Kh7", "Qe4+", "g6", "Qxb1"], [[7, 1, 8, 2, false], [7, 2, 7, 3, false]], true],
+	["5rk1/pR1R3p/1pp1p1p1/4r3/2P5/8/P1P2P1P/6K1", ["Rg7+", "Kh8", "Rxh7+", "Kg8", "Rbg7+"], [[7, 1, 8, 1, false], [8, 1, 7, 1, false]], true],
+	["8/Q1pkr1pp/2r5/8/8/6P1/PP2qPP1/R5KR", ["Qe1+", "Rxe1", "Rxe1+", "Kh2", "Rh6+"], [[1, 8, 5, 8, false], [7, 8, 8, 7, false]], false],
+	["2r5/3b2pk/5b2/P1pBp2p/2P1P3/2NnBPK1/6PP/R4R2", ["h4+"], [], false],
+	["r4rk1/p1p3pp/4p3/2Np4/Q2PnB2/4Pn1P/5qP1/2R2R1K", ["Qg1+", "Rxg1", "Nf2+"], [[6, 8, 7, 8, false]], false],
+	["4N2k/7P/5Kr1/8/2p5/8/8/8", ["Kxg6", "c3", "Nd6", "c2", "Nf7+"], [[3, 5, 3, 6, false], [3, 6, 3, 7, false]], true],
+	["3r1rk1/2pqbppp/p1n2n2/1p6/3Np3/1PN1P1Pb/PBP2PBP/RQ3RK1", ["Nxc6", "Bxg2", "Nxe7+", "Qxe7", "Kxg2"], [[8, 6, 7, 7, false], [4, 2, 5, 2, false]], true],
+	["5rk1/p4Npp/4p3/3p4/8/4PR2/r2n2PP/5RK1", ["Nh6+", "gxh6", "Rg3+", "Kh8", "Rxf8+"], [[7, 2, 8, 3, false], [7, 1, 8, 1, false]], true],
+	["1q2r3/p3R1pk/1p3pNp/3p1P1Q/b1pP4/P6P/1P4P1/7K", ["Nf8+", "Kh8", "Qg6", "Rxe7", "Qh7+"], [[8, 2, 8, 1, false], [5, 1, 5, 2, false]], true],
+	["5k2/1p3pp1/p6p/3PP3/P3PK2/1Pr2RP1/8/8", ["g5+", "Kg4", "h5+", "Kxg5", "Rxf3"], [[6, 5, 7, 5, false], [7, 5, 7, 4, false]], false],
+	["3r4/6RP/8/4p1P1/8/4k3/3p4/3K4", ["Rc8", "Rc7", "Rxc7", "h8=Q", "Rc1+"], [[7, 2, 3, 2, false], [8, 2, 8, 1, "Q"]], false],
+	["2krB3/pbp2r2/1p1b2q1/6Bp/2pp4/4Q3/PP3PPP/R3R1K1", ["Qh3+", "Rdd7", "Qxd7+", "Rxd7", "Bxg6"], [[4, 1, 4, 2, false], [6, 2, 4, 2, false]], true],
+	["1q3r1k/3N2pp/R1b1p3/1p1p4/1QpPn3/2P1p2P/3N1PP1/R4BK1", ["exf2+", "Kh1", "Ng3+", "Kh2", "Nxf1+", "Kh1", "Qh2+"], [[7, 8, 8, 8, false], [8, 8, 8, 7, false], [8, 7, 8, 8, false]], false],
+	["b4rk1/pp2Rpp1/2p4p/2Qn4/8/P2P1P1P/1q3P2/4R1K1", ["R7e2", "Qf6", "Qxf8+", "Kxf8", "Re8+"], [[2, 7, 6, 3, false], [7, 1, 6, 1, false]], true],
+	["1r3k1r/ppp5/3b4/3Q4/5q2/1B3n1p/PP2RP2/1K5R", ["Rxh3", "Nd2+", "Kc2", "Nxb3", "Rxh8+", "Kg7", "Rxb8"], [[6, 6, 4, 7, false], [4, 7, 2, 6, false], [6, 1, 7, 2, false]], true],
+	["4r1k1/5pp1/2p2q2/Q7/2Pp3p/P2P2P1/4rPKP/4RR2", ["h3+", "Kxh3", "Qe6+", "Kg2", "Rxe1", "Rxe1", "Qxe1", "Qxe1", "Rxe1"], [[7, 7, 8, 6, false], [8, 6, 7, 7, false], [6, 8, 5, 8, false], [1, 4, 5, 8, false]], false],
+	["3nr3/R1pbkpPR/1p3p2/3P4/1b5Q/5n2/B1N1q2P/1r2B2K", ["Qxb4+", "Rxb4", "Bxb4+", "c5", "dxc6+"], [[2, 8, 2, 5, false], [3, 2, 3, 4, false]], true],
+	["4nrk1/p1r1qp1p/6pQ/4p1PP/np2P3/3P1PN1/P3N2R/4K2R", ["Qxh7+", "Kxh7", "hxg6+", "Kxg6", "Rh6+", "Kxg5", "R1h5+"], [[7, 1, 8, 2, false], [8, 2, 7, 3, false], [7, 3, 7, 4, false]], true],
+	["5rk1/ppq2ppp/2p5/4bN2/4P3/6Q1/PPP2PPP/3R2K1", ["Nh6+", "Kh8", "Qxe5", "Qxe5", "Nxf7+", "Rxf7", "Rd8+", "Qe8", "Rxe8+", "Rf8", "Rxf8+"], [[7, 1, 8, 1, false], [3, 2, 5, 4, false], [6, 1, 6, 2, false], [5, 4, 5, 1, false], [6, 2, 6, 1, false]], true],
+	["2k5/6R1/N7/8/8/6K1/7p/5b2", ["Rg8+", "Kb7", "Nc5+", "Kb6", "Na4+", "Kb5", "Nc3+", "Kb4", "Na2+", "Kb3", "Nc1+", "Kb2", "Kxh2", "Kxc1", "Rg1"], [[3, 1, 2, 2, false], [2, 2, 2, 3, false], [2, 3, 2, 4, false], [2, 4, 2, 5, false], [2, 5, 2, 6, false], [2, 6, 2, 7, false], [2, 7, 3, 8, false]], true]
+]
+
+let puzzleValid = []
+let puzzleBots = []
+
 
 let menuButtonStyle = `
 	transition: background-color 0.5s, width 0.5s, opacity 0.5s, left 0.5s;
@@ -83,24 +118,24 @@ function preload() {
 		"click1": loadSound("SFX/menuClick1.mp3"),
 		"click2": loadSound("SFX/menuClick2.mp3"),
 		"click3": loadSound("SFX/menuClick3.mp3"),
+		"correct": loadSound("SFX/correct.mp3"),
 		"error": loadSound("SFX/error.mp3"),
 		"back": loadSound("SFX/back.mp3")
 	}
 	songs = {
 		// "Kirara Magic - Checkmate": loadSound("Songs/Checkmate.mp3"),
 		// "KLYDIX - Dream Flower": loadSound("Songs/Dream Flower.mp3"),
-		"Tobu - Escape": loadSound("Songs/Escape.mp3"),
-		"Xomu - Last Dance": loadSound("Songs/Last Dance.mp3"),
-		"Sakuzyo - Lost Memory": loadSound("Songs/Lost Memory.mp3"),
-		"EspiDev - Parfait": loadSound("Songs/Parfait.mp3"),
+		// "Tobu - Escape": loadSound("Songs/Escape.mp3"),
+		// "Xomu - Last Dance": loadSound("Songs/Last Dance.mp3"),
+		// "Sakuzyo - Lost Memory": loadSound("Songs/Lost Memory.mp3"),
+		// "EspiDev - Parfait": loadSound("Songs/Parfait.mp3"),
 		"PIKASONIC - Relive": loadSound("Songs/Relive.mp3"),
 		// "megawolf77 - Shining Sprinter": loadSound("Songs/Shining Sprinter.mp3"),
 		// "F-777 - Stay Tuned": loadSound("Songs/Stay Tuned.mp3"),
 		// "BuildCastlesInAir - Untitled Song": loadSound("Songs/Untitled Song.mp3"),
 	}
-	icons = {
-		"Human": loadImage("Icons/human.png")
-	}
+	correctImg = loadImage("Icons/correct.png")
+	incorrectImg = loadImage("Icons/incorrect.png")
 	settingsImg = loadImage("Icons/settings.png")
 	kodeMono = loadFont("Font/KodeMono.ttf")
 }
@@ -305,6 +340,8 @@ function draw() {
 		for (let s in volumeSliders) {volumeSliders[s].position(-windowWidth, 0)}
 		for (let s in colourSliders) {colourSliders[s].position(-windowWidth, 0)}
 	}
+
+	if (puzzleCounter !== false || time <= backPuzzlesStartTime + 500) {drawPuzzles()}
 
 	transition(clickedTime, transitionDuration, ...currentTransition)
 
@@ -577,6 +614,64 @@ function drawMenu(title, desc, colour1, colour2, colour3) {
 	pop()
 }
 
+function drawPuzzles() {
+	let alpha = (puzzleCounter !== false) ? 255 : 255 - (255 * factor(backPuzzlesStartTime, 500, "sine"))
+	let secsPassed = floor(((puzzlesFinish ? puzzlesFinish : time)-puzzlesStartTime)/1000)
+	let mins = String(floor(secsPassed / 60))
+	let secs = (secsPassed % 60).toLocaleString('en-US', {minimumIntegerDigits: 2})
+	push()
+	rectMode(CENTER)
+	textAlign(CENTER)
+	imageMode(CENTER)
+	strokeWeight(0)
+	textSize(decile)
+
+	fill(25, alpha)
+	rect((windowWidth+decile*9)/2, decile*5.875, decile*5.5, decile*6.5, decile*0.35)
+	rect((windowWidth+decile*9)/2, decile*1.725, decile*3.1125, decile*1.25)
+	triangle((windowWidth+decile*9)/2 + decile*1.55, decile*1.1, (windowWidth+decile*9)/2 + decile*1.55, decile*2.35, (windowWidth+decile*9)/2 + decile*2.05, decile*1.725)
+	triangle((windowWidth+decile*9)/2 - decile*1.55, decile*1.1, (windowWidth+decile*9)/2 - decile*1.55, decile*2.35, (windowWidth+decile*9)/2 - decile*2.05, decile*1.725)
+
+	fill(100, alpha)
+	rect((windowWidth+decile*9)/2, decile*1.625, decile*3.0125, decile*1.25)
+	triangle((windowWidth+decile*9)/2 + decile*1.5, decile, (windowWidth+decile*9)/2 + decile*1.5, decile*2.25, (windowWidth+decile*9)/2 + decile*2, decile*1.625)
+	triangle((windowWidth+decile*9)/2 - decile*1.5, decile, (windowWidth+decile*9)/2 - decile*1.5, decile*2.25, (windowWidth+decile*9)/2 - decile*2, decile*1.625)
+
+
+	fill(175, alpha)
+	text(mins + ":" + secs, (windowWidth+decile*9)/2, decile*2)
+
+	if (puzzleCounter !== false) {
+		fill(puzzlesData[puzzleCounter][3] ? 230 : 25)
+		rect((windowWidth+decile*9)/2, decile*5.375, decile*5.23, decile*5.25, decile/4)
+
+		textSize(decile/2)
+		fill(!puzzlesData[puzzleCounter][3] ? 230 : 25)
+		text(puzzlesData[puzzleCounter][3] ? "White to Move" : "Black to Move", (windowWidth+decile*9)/2, decile*3.375)
+		rect((windowWidth+decile*9)/2 - decile*1.2, decile*3.5, decile*1.5, decile/20)
+	}
+
+	fill(75, alpha)
+	rect((windowWidth+decile*9)/2, decile*6.375, decile*5.25, decile*5.25, 0, 0, decile/4, decile/4)
+
+
+	noSmooth()
+	for (let i = -2; i <= 2; i++) {
+		for (let j = -2; j <= 2; j++) {
+			let result = puzzleResults[(j+2)*5 + i+2]
+			if (result !== null) {
+				tint(255, alpha)
+				image(result ? correctImg : incorrectImg, (windowWidth+decile*9)/2 + decile*i, decile*6.375 + decile*j, decile*0.75, decile*0.75)
+			} else {
+				fill(50, alpha)
+				square((windowWidth+decile*9)/2 + decile*i, decile*6.375 + decile*j, decile*0.75)
+			}
+		}
+	}
+	smooth()
+	pop()
+}
+
 function drawCredits() {
 	let alpha = (buttons.divs["top"].html() === "Secret") ? 255 : 255 - (255 * factor(backCreditsStartTime, 500, "sine"))
 	push()
@@ -840,7 +935,8 @@ function mouseClickedElement() {
 	}
 
 	if (clickedButton === "Back") { ///// If back button pressed
-		if (mode === "game") {backTime = time}
+		if (puzzleCounter !== false) {backPuzzlesStartTime = time; puzzleCounter = false}
+		else if (mode === "game") {backTime = time}
 		else if (mode === "start") {backMenuStartTime = time}
 		else if (buttons.divs["top"].html() === "Secret") {backCreditsStartTime = time; buttons.divs["top"].html("Secret 2: Electric Boogaloo")}
 		mode = "menu"
@@ -878,11 +974,7 @@ function mouseClickedElement() {
 			for (let div in buttons.divs) {
 				buttons.divs[div].style("opacity: 0; width: 0vw")
 
-				if (clickedButton === "Puzzles") { // ##################### EDITING HERE #####################
-
-					
-					console.log("hi")
-				} else if (clickedButton === "Credits") { //////// CREDITS TRANSITION
+				if (clickedButton !== "Play") { //////// Non-Play TRANSITION
 					clickedTime = time
 					transitionDuration = 750
 					currentTransition = ["fadeIn", "sine"]
@@ -903,10 +995,23 @@ function mouseClickedElement() {
 				setTimeout(() => {
 					menuDebounce = true // Bring back back button
 					backButton.style("width: 14vw; left: 85vw; opacity: 0.9; background-color: #4A4A4A")
+
+					if (clickedButton === "Puzzles") {
+						puzzlesStartTime = time
+						puzzlesFinish = false
+						puzzleCounter = 0
+						puzzleResults = Array(25).fill(null)
+						puzzleValid = [...puzzlesData[0][1]]
+						puzzleBots = [...puzzlesData[0][2]]
+						mode = "game"
+						game.status = "killed"
+						game = new Chess(puzzlesData[0][0], "Human", "Human", Infinity, Infinity, Infinity, Infinity, puzzlesData[0][3])
+					} 
+
 					for (let v of ["top", "middle", "bottom"]) {
 						let newText = buttons[clickedButton][v]
 						buttons.divs[v].html(newText)
-						buttons.divs[v].style(`opacity: ${clickedButton === "Credits" ? 0 : 0.9}; background-color: ${buttons.uColour[newText]}; width: ${buttons.width[newText]}vw`)
+						buttons.divs[v].style(`opacity: ${clickedButton !== "Play" ? 0 : 0.9}; background-color: ${buttons.uColour[newText]}; width: ${clickedButton === "Puzzles" ? 0 : buttons.width[newText]}vw`)
 					}
 				}, 750)
 			}
@@ -950,10 +1055,7 @@ function mouseClickedElement() {
 					backButton.style("width: 14vw; left: 85vw; opacity: 0.9; background-color: #4A4A4A")
 				}, 250)
 			}, 250)
-		} else {
-			menuDebounce = true
-			sfx["error"].play()
-		}
+		} else {menuDebounce = true}
 	}
 }
 
@@ -1128,16 +1230,19 @@ function mousePressed() {
 				}
 			}
 			game.highlightSquares = []; game.arrowSquares = []
+
 			if (game.mode === "promo") { // Promotion
-				if (min(rank, file) >= 4 && max(rank, file) <= 5) {
+				let promoRank = floor(mouseX/decile)
+				let promoFile = floor(mouseY/decile)
+				if (min(promoRank, promoFile) >= 4 && max(promoRank, promoFile) <= 5) {
 					let piece
-					if (rank === 4 && file === 4) {
+					if (promoRank === 4 && promoFile === 4) {
 						piece = game.turn ? "Q" : "q"
-					} else if (rank === 5 && file === 4) {
+					} else if (promoRank === 5 && promoFile === 4) {
 						piece = game.turn ? "R" : "r"
-					} else if (rank === 4 && file === 5) {
+					} else if (promoRank === 4 && promoFile === 5) {
 						piece = game.turn ? "N" : "n"
-					} else if (rank === 5 && file === 5) {
+					} else if (promoRank === 5 && promoFile === 5) {
 						piece = game.turn ? "B" : "b"
 					}
 
@@ -1150,7 +1255,6 @@ function mousePressed() {
 		if (rank && file) {
 			if (mouseBuffer[2] === true && mouseButton === LEFT) {
 				if ((mouseBuffer[0] !== rank || mouseBuffer[1] !== file) && mouseButton === LEFT && (game.turn ? game.whitePlayer : game.blackPlayer) === "Human") {
-					let piece = game.board[mouseBuffer[1] - 1][mouseBuffer[0] - 1]
 					let move = game.handleMove(mouseBuffer[0], mouseBuffer[1], rank, file)
 					if (move && game.mode !== "promo") {game.updateAttributes(move)}
 				} mouseBuffer = [false, false, false]
@@ -1271,7 +1375,7 @@ function mousePressed() {
 		//rect(decile*0.75, decile*6.55, decile*4.75, decile*1.8, decile/10)
 
 		} else if (decile*0.75 <= mouseX && mouseX <= decile*5.5 && decile*6.55 <= mouseY && mouseY <= decile*8.35) {
-			boardColours = [[200, 150, 255], [100, 50, 175]]
+			boardColours = [[200, 200, 200], [160, 100, 60]]
 			for (let s in volumeSliders) {volumeSliders[s].value(1)}
 		}
 
@@ -1359,7 +1463,6 @@ function botTest(plr1, plr2, num) {
 	if (gameCount < num) {
 		if (game.status !== "active") {
 			gameCount++
-			console.log(game.status)
 			if (Object.keys(results).includes(game.status[0])) {
 				results[game.status[0]]++
 			} else {
@@ -1392,13 +1495,23 @@ class Chess { // Main Section of Code
 		this.blackPlayer = bPlayer
 		this.mode = "board"
 		this.turn = activeColour
-		this.flip = true
+		this.flip = activeColour
 		this.move = 0
 		this.status = "active"
 		this.threeFold = []
 		this.lastCapture = [-halfMoves]
 		this.moveCount = fullmoves
 		this.start = true
+
+		// Do this for rooks too
+		if (this.bitboards[0]["K"][0][0] !== 5 || this.bitboards[0]["K"][0][1] !== 8) {
+			this.canCastle[0][0] = false
+			this.canCastle[0][1] = false
+		}
+		 if (this.bitboards[0]["k"][0][0] !== 5 || this.bitboards[0]["k"][0][1] !== 1) {
+			this.canCastle[0][2] = false
+			this.canCastle[0][3] = false
+		}
 	}
 
 	initiateBoard(fen) {
@@ -1500,12 +1613,15 @@ class Chess { // Main Section of Code
 		this.drawPosFromBoard()
 		this.showLegalMoves()
 		this.drawArrowSquares()
-		this.drawTimer()
-		this.drawIcons()
-		this.drawUtility()
-		if ((windowWidth/windowHeight) >= 1.85) {this.drawNotation()}
-		if (this.mode === "promo") {this.promotionUI()}
-		if (!["active", "finish"].includes(this.status)) {this.drawEndScreen()}
+
+		if (puzzleCounter === false) {
+			this.drawTimer()
+			this.drawIcons()
+			this.drawUtility()
+			if ((windowWidth/windowHeight) >= 1.85) {this.drawNotation()}
+			if (this.mode === "promo") {this.promotionUI()}
+			if (!["active", "finish"].includes(this.status)) {this.drawEndScreen()}
+		}
 		pop()
 	}
 
@@ -1787,27 +1903,55 @@ class Chess { // Main Section of Code
 
 	////////// Back End - Move Validation //////////
 
-	updateAttributes(move) {
-		if (this.turn) {this.whiteTime += this.whiteIncrement} else {this.blackTime += this.blackIncrement}
-		this.board = move[0]
-		this.boardHistory.push(move[0])
-		this.canCastle.push(move[1])
-		this.bitboards.push(move[2])
-		this.moveHistory.push(move[3])
-		this.threeFold.push(this.convertThreefold(move[0]))
-		this.passantHistory.push(move[4])
-		this.whiteTimeHistory.push(this.whiteTime)
-		this.blackTimeHistory.push(this.blackTime)
-		this.move = this.boardHistory.length - 1
-		this.turn = !this.turn
-		this.lastCapture.push(move[3].includes("x") || move[3].slice(0, 1) === move[3].slice(0, 1).toLowerCase() ? this.move : this.lastCapture[this.lastCapture.length-1])
+	updateAttributes(move, puzzleBotsMove=false) {
+		// move => [{0}activeBoard, {1}castleArr, {2}locator, {3}notation, {4}passantSquare]
+		if (puzzleBotsMove) {puzzleBots.shift()}
+		if (puzzleCounter === false || (move[3] === puzzleValid[0])) {
+			if (this.turn) {this.whiteTime += this.whiteIncrement} else {this.blackTime += this.blackIncrement}
+			this.board = move[0]
+			this.boardHistory.push(move[0])
+			this.canCastle.push(move[1])
+			this.bitboards.push(move[2])
+			this.moveHistory.push(move[3])
+			this.threeFold.push(this.convertThreefold(move[0]))
+			this.passantHistory.push(move[4])
+			this.whiteTimeHistory.push(this.whiteTime)
+			this.blackTimeHistory.push(this.blackTime)
+			this.move = this.boardHistory.length - 1
+			this.turn = !this.turn
+			this.lastCapture.push(move[3].includes("x") || move[3].slice(0, 1) === move[3].slice(0, 1).toLowerCase() ? this.move : this.lastCapture[this.lastCapture.length-1])
 
-		this.updateStatus()
+			this.updateStatus()
 
-		if (this.status === "active" && (this.turn ? this.whitePlayer : this.blackPlayer) !== "Human" && this.mode !== "promo") {
-			promiseDB = false
-			let args = [this.copyBoard(this.board), this.copyBitboard(this.bitboards[this.bitboards.length-1]), [...this.canCastle[this.canCastle.length-1]], this.passantHistory[this.passantHistory.length-1], this.turn, this.move]
-			botApi.postMessage([(this.turn ? this.whitePlayer : this.blackPlayer), args])
+			if (puzzleCounter !== false) {
+				puzzleValid.shift()
+				if (!puzzleValid.length) {
+					sfx["correct"].play()
+					if (puzzleResults[puzzleCounter] !== false) {puzzleResults[puzzleCounter] = true}
+					if (puzzleCounter < puzzlesData.length-1) {
+						puzzleCounter++
+						this.status = "killed"
+						puzzleValid = [...puzzlesData[puzzleCounter][1]]
+						puzzleBots = [...puzzlesData[puzzleCounter][2]]
+						game = new Chess(puzzlesData[puzzleCounter][0], "Human", "Human", Infinity, Infinity, Infinity, Infinity, puzzlesData[puzzleCounter][3])
+					} else {
+						puzzlesFinish = time
+					}
+				} else if (!puzzleBotsMove) {
+					// set timeout
+					setTimeout(() => {
+						this.updateAttributes(this.handleMove(...puzzleBots[0], false), true)
+					}, 250)
+				}
+			} else if (this.status === "active" && (this.turn ? this.whitePlayer : this.blackPlayer) !== "Human" && this.mode !== "promo") {
+				promiseDB = false
+				let args = [this.copyBoard(this.board), this.copyBitboard(this.bitboards[this.bitboards.length-1]), [...this.canCastle[this.canCastle.length-1]], this.passantHistory[this.passantHistory.length-1], this.turn, this.move]
+				botApi.postMessage([(this.turn ? this.whitePlayer : this.blackPlayer), args])
+			}
+		} else if (puzzleCounter !== false) {
+			// incorrect solution
+			sfx["error"].play()
+			puzzleResults[puzzleCounter] = false
 		}
 	}
 
@@ -1900,7 +2044,6 @@ class Chess { // Main Section of Code
 			this.updateAttributes(args)
 			positions += this.moveTest(depth-1, args[3])
 			this.undoMove(true)
-			//if(prev==="a4") {console.log(args[3])}
 		}
 
 		//console.log(positions, prev)
