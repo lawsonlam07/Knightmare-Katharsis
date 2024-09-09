@@ -10,8 +10,8 @@ let startFEN = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR"
 let testFENs = [
 	// "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR", // w KQkq - 0 1
 	"r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R", // w KQkq -
-	// "8/2p5/3p4/KP5r/1R3p1k/8/4P1P1/8", // w - - needs context or breaks game
-	// "r3k2r/Pppp1ppp/1b3nbN/nP6/BBP1P3/q4N2/Pp1P2PP/R2Q1RK1", // w kq - 0 1 breaks game as black
+	"8/2p5/3p4/KP5r/1R3p1k/8/4P1P1/8", // w - - needs context or breaks game
+	// "r3k2r/Pppp1ppp/1b3nbN/nP6/BBP1P3/q4N2/Pp1P2PP/R2Q1RK1", // w kq - 0 1 breaks game as black due to king being able to be captured
 	"rnbq1k1r/pp1Pbppp/2p5/8/2B5/8/PPP1NnPP/RNBQK2R", // w KQ - 1 8
 	"rn1qkb1r/pp2pppp/2p2n2/5b2/P1pP3N/2N5/1P2PPPP/R1BQKB1R"
 ]
@@ -123,13 +123,13 @@ function preload() {
 		"back": loadSound("SFX/back.mp3")
 	}
 	songs = {
-		// "Kirara Magic - Checkmate": loadSound("Songs/Checkmate.mp3"),
+		"Kirara Magic - Checkmate": loadSound("Songs/Checkmate.mp3"),
 		// "KLYDIX - Dream Flower": loadSound("Songs/Dream Flower.mp3"),
 		// "Tobu - Escape": loadSound("Songs/Escape.mp3"),
 		// "Xomu - Last Dance": loadSound("Songs/Last Dance.mp3"),
 		// "Sakuzyo - Lost Memory": loadSound("Songs/Lost Memory.mp3"),
 		// "EspiDev - Parfait": loadSound("Songs/Parfait.mp3"),
-		"PIKASONIC - Relive": loadSound("Songs/Relive.mp3"),
+		// "PIKASONIC - Relive": loadSound("Songs/Relive.mp3"),
 		// "megawolf77 - Shining Sprinter": loadSound("Songs/Shining Sprinter.mp3"),
 		// "F-777 - Stay Tuned": loadSound("Songs/Stay Tuned.mp3"),
 		// "BuildCastlesInAir - Untitled Song": loadSound("Songs/Untitled Song.mp3"),
@@ -1504,12 +1504,13 @@ class Chess { // Main Section of Code
 		this.start = true
 
 		// Do this for rooks too
-		if (this.bitboards[0]["K"][0][0] !== 5 || this.bitboards[0]["K"][0][1] !== 8) {
+		if (this.bitboards[0]["K"][0][0] !== 5 || this.bitboards[0]["K"][0][1] !== 8 || this.bitboards[0]["R"].every(v => v[0] !== 1 || v[1] !== 8)) {
 			this.canCastle[0][0] = false
+		} if (this.bitboards[0]["K"][0][0] !== 5 || this.bitboards[0]["K"][0][1] !== 8 || this.bitboards[0]["R"].every(v => v[0] !== 8 || v[1] !== 8)) {
 			this.canCastle[0][1] = false
-		}
-		 if (this.bitboards[0]["k"][0][0] !== 5 || this.bitboards[0]["k"][0][1] !== 1) {
+		} if (this.bitboards[0]["k"][0][0] !== 5 || this.bitboards[0]["k"][0][1] !== 1 || this.bitboards[0]["r"].every(v => v[0] !== 1 || v[1] !== 1)) {
 			this.canCastle[0][2] = false
+		} if (this.bitboards[0]["k"][0][0] !== 5 || this.bitboards[0]["k"][0][1] !== 1 || this.bitboards[0]["r"].every(v => v[0] !== 8 || v[1] !== 1)) {
 			this.canCastle[0][3] = false
 		}
 	}
