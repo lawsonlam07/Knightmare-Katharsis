@@ -37,7 +37,7 @@ let wPlayer = 1, bPlayer = 1
 let menuPreset = ["Standard", descStandard, [51, 153, 255], [0, 77, 153], [0, 34, 102]]
 let boardColours = [[200, 200, 200], [160, 100, 60]]
 let colourPickerMode = 0
-let customAdvanced = false
+let customAdvanced = true
 let songCounter = 0
 
 let puzzleCounter = false
