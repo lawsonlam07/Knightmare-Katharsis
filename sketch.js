@@ -8,10 +8,8 @@ const descCustom = "Chess, but you set up the starting position. Play with a fri
 
 let startFEN = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR"
 let testFENs = [
-	// "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR", // w KQkq - 0 1
 	"r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R", // w KQkq -
-	"8/2p5/3p4/KP5r/1R3p1k/8/4P1P1/8", // w - - needs context or breaks game
-	// "r3k2r/Pppp1ppp/1b3nbN/nP6/BBP1P3/q4N2/Pp1P2PP/R2Q1RK1", // w kq - 0 1 breaks game as black due to king being able to be captured
+	"8/2p5/3p4/KP5r/1R3p1k/8/4P1P1/8", // w - - 
 	"rnbq1k1r/pp1Pbppp/2p5/8/2B5/8/PPP1NnPP/RNBQK2R", // w KQ - 1 8
 	"rn1qkb1r/pp2pppp/2p2n2/5b2/P1pP3N/2N5/1P2PPPP/R1BQKB1R"
 ]
@@ -23,7 +21,7 @@ let testFENs = [
 let results = []
 let gameCount = 0
 
-let backTime = 0, backMenuStartTime = 0, backCreditsStartTime = 0, backPuzzlesStartTime = 0
+let backTime = 0, backMenuStartTime = 0, backCreditsStartTime = 0, backPuzzlesStartTime = 0, backSettingsStartTime = 0
 let clickedTime = 0
 let transitionDuration = 500
 let promiseDB = true
@@ -132,7 +130,7 @@ function preload() {
 		// "PIKASONIC - Relive": loadSound("Songs/Relive.mp3"),
 		// "megawolf77 - Shining Sprinter": loadSound("Songs/Shining Sprinter.mp3"),
 		// "F-777 - Stay Tuned": loadSound("Songs/Stay Tuned.mp3"),
-		// "BuildCastlesInAir - Untitled Song": loadSound("Songs/Untitled Song.mp3"),
+		// "BuildCastlesInAir - Untitled Song": loadSound("Songs/Untitled Song.mp3")
 	}
 	correctImg = loadImage("Icons/correct.png")
 	incorrectImg = loadImage("Icons/incorrect.png")
@@ -257,6 +255,10 @@ function setup() {
 		"green": createSlider(0, 255),
 		"blue": createSlider(0, 255)
 	}
+	settingsBools = {
+		"legal": createCheckbox("Show Legal Moves", true),
+		"queen": createCheckbox("Auto-Queen Promo", false)
+	}
 	volumeSliders = {
 		"music": createSlider(0, 1, 1, 0.01),
 		"sfx": createSlider(0, 1, 1, 0.01)
@@ -276,8 +278,9 @@ function setup() {
 		"div1": createDiv(),
 		"div2": createDiv()
 	}
-	for (let v of ["w1", "w2", "b1", "b2"]) {customMenu[v].style("color: white")}
+	for (let v of ["w1", "w2", "b1", "b2"]) {customMenu[v].style("color: white; user-select: none")}
 	for (let v in customMenu) {customMenu[v].style("font-family: kodeMono")}
+	for (let v in settingsBools) {settingsBools[v].style("font-family: kodeMono; color: #4B4B4B; transform: scale(1.5); user-select: none")}
 
 	for (let box in timeInputs) {
 		timeInputs[box].attribute("maxlength", "2")
@@ -336,7 +339,9 @@ function draw() {
 	backButton.mousePressed(mouseClickedElement)
 
 	if (mode === "menu" && ["Play", "Standard"].includes(buttons.divs["top"].html())) {image(settingsImg, windowWidth-decile*3, decile*7, decile*2, decile*2)}
-	if (mode === "settings") {drawSettings()} else {
+	if (mode === "settings" || time <= backSettingsStartTime + 500) {drawSettings()} 
+	if (mode !== "settings") {
+		for (let s in settingsBools) {settingsBools[s].position(-windowWidth, 0)}
 		for (let s in volumeSliders) {volumeSliders[s].position(-windowWidth, 0)}
 		for (let s in colourSliders) {colourSliders[s].position(-windowWidth, 0)}
 	}
@@ -716,18 +721,19 @@ function drawCredits() {
 }
 
 function drawSettings() {
-	for (let slider in volumeSliders) {volumeSliders[slider].style(`width: 44vh;`)}
+	let alpha = (mode === "settings") ? 255 : 255 - (255 * factor(backSettingsStartTime, 500, "sine"))
+	for (let slider in volumeSliders) {volumeSliders[slider].style(`width: 44vh`)}
 	push()
 	rectMode(CENTER)
 	textAlign(CENTER)
 	strokeWeight(0)
 
-	fill(50)
+	fill(50, alpha)
 	rect(windowWidth/2, windowHeight/2, windowWidth, windowHeight)
-	fill(155)
+	fill(155, alpha)
 	rect(windowWidth/2, windowHeight/2, windowWidth-decile, decile*9, decile/2)
 
-	fill(125)
+	fill(125, alpha)
 	rect(decile*3.25, decile*1.4, decile*5, decile*1.25, decile/5, 0, 0, decile/5)
 	rect(decile*6.75, decile*1, decile*7, decile*0.03125)
 	rect(decile*6.75, decile*1.2, decile*7, decile*0.0625)
@@ -740,11 +746,11 @@ function drawSettings() {
 		triangle(decile*(5.75+v), decile*2.025, decile*(5.75+v), decile*1.4, decile*(5.125+v), decile*2.025)
 		triangle(decile*(5.75+v), decile*0.775, decile*(5.75+v), decile*1.4, decile*(5.125+v), decile*0.775)
 	}
-	fill(50)
+	fill(50, alpha)
 	textSize(decile)
 	text("Settings", decile*3.25, decile*1.75)
 
-	fill(175)
+	fill(175, alpha)
 	square(windowWidth/2-decile, decile*3.15, decile*1.8)
 	square(windowWidth/2+decile, decile*3.15, decile*1.8)
 	triangle(windowWidth/2-decile*1.9, decile*2.25, windowWidth/2-decile*1.9, decile*4.05, windowWidth/2-decile*2.75, decile*4.05)
@@ -752,85 +758,89 @@ function drawSettings() {
 	triangle(windowWidth/2-decile*0.1, decile*4.05, windowWidth/2-decile*2.75, decile*4.05, windowWidth/2-decile*0.1, decile*4.75)
 	triangle(windowWidth/2+decile*0.1, decile*4.05, windowWidth/2+decile*2.75, decile*4.05, windowWidth/2+decile*0.1, decile*4.75)
 
-	strokeWeight(3); stroke(50)
-	fill(...boardColours[0])
+	strokeWeight(3); stroke(50, alpha)
+	fill(...boardColours[0], alpha)
 	square(windowWidth/2-decile, decile*3.15, decile*1.5, decile/8)
-	fill(...boardColours[1])
+	fill(...boardColours[1], alpha)
 	square(windowWidth/2+decile, decile*3.15, decile*1.5, decile/8)
 	strokeWeight(0)
 
-	fill(175) // Board Preview
+	fill(175, alpha) // Board Preview
 	square(windowWidth/2, decile*6.75, decile*3.5, decile/8)
 	rect(windowWidth/2 - decile*2.25, decile*6.75, decile/4, decile*3.5, decile/8)
 	rect(windowWidth/2 + decile*2.25, decile*6.75, decile/4, decile*3.5, decile/8)
-	fill(...boardColours[1])
+	fill(...boardColours[1], alpha)
 	square(windowWidth/2, decile*6.75, decile*3)
 	strokeWeight(0)
-	fill(...boardColours[0])
+	fill(...boardColours[0], alpha)
 	square(windowWidth/2 + decile*0.75, decile*7.5, decile*1.5)
 	square(windowWidth/2 - decile*0.75, decile*6, decile*1.5)
 
 	drawColourPicker(false)
 
-	fill(75)
+	fill(75, alpha)
 	rectMode(CORNER)
 	arc(decile, decile*9, decile, decile, HALF_PI, PI)
-	stroke(75); strokeWeight(1)
+	stroke(75, alpha); strokeWeight(1)
 	rect(decile, decile*8.75, windowWidth*0.6-decile, decile*0.75)
 	rect(decile/2, decile*8.75, windowWidth*0.6-decile, decile*0.25)
 	triangle(windowWidth*0.6, decile*8.75, windowWidth*0.6, decile*9.5, windowWidth*0.6+decile*1.25, decile*9.5)
 	strokeWeight(0)
 
-	fill(175)
+	fill(175, alpha)
 	rect(decile*0.75, decile*2.25, decile*5, decile*1.8, decile/8, 0, 0, decile/8)
 	rect(decile*0.75, decile*4.25, decile*5, decile*1.8, decile/8, 0, 0, decile/8)
 	triangle(decile*5.75, decile*2.25, decile*5.75, decile*4.05, decile*6.5, decile*2.5)
 	triangle(decile*5.75, decile*4.25, decile*5.75, decile*6.05, decile*6.5, decile*4.5)
 
-	fill(250, 50, 50) // Reset Defaults Button
-	rect(decile*0.75, decile*6.55, decile*4.75, decile*1.8, decile/10)
-	fill(155); stroke(155); strokeWeight(2)
-	triangle(decile*0.75, decile*7.6, decile*0.75, decile*8.35, decile*1.75, decile*8.35)
-	triangle(decile*5.5, decile*7.2, decile*5.5, decile*6.55, decile*4.5, decile*6.55)
-	strokeWeight(0)
+	fill(250, 50, 50, alpha) // Reset Defaults Button
+	rect(decile*0.75, decile*7.35, decile*3.6, decile*1.25, decile/10)
+	// fill(155); stroke(155); strokeWeight(2)
+	// triangle(decile*0.75, decile*7.6, decile*0.75, decile*8.35, decile*1.75, decile*8.35)
+	// triangle(decile*5.5, decile*7.2, decile*5.5, decile*6.55, decile*4.5, decile*6.55)
+	// strokeWeight(0)
 
 	textSize(decile/2)
 	textAlign(LEFT)
-	fill(200)
+	fill(200, alpha)
 	text(`Now Playing: ${playingSong}`, decile, decile*9.3)
 
-	fill(75)
+	fill(75, alpha)
 	textSize(decile*0.66)
 	text("Music Volume", decile*0.875, decile*3)
 	text("SFX Volume", decile*0.875, decile*5)
-	fill(150, 1, 3)
-	text("Restore\n   Defaults", decile*0.875, decile*7.25)
+	fill(150, 1, 3, alpha)
+	textSize(decile*0.5)
+	text("Restore\n   Defaults", decile*0.875, decile*7.8)
 
 	textAlign(CENTER, CENTER)
-	strokeWeight(3); stroke(50)
-	fill(255)
+	strokeWeight(3); stroke(50, alpha)
+	fill(255, alpha)
 	text("Board\nPreview", windowWidth/2, decile*6.75)
 
 	textSize(decile/5); strokeWeight(1)
-	fill(75)
+	fill(75, alpha)
 	text("Lighter\nBoard\nColour", windowWidth/2-decile, decile*3.125)
-	fill(175)
+	fill(175, alpha)
 	text("Darker\nBoard\nColour", windowWidth/2+decile, decile*3.125)
 
+	settingsBools["legal"].position(decile*1.5, decile*6.25)
+	settingsBools["queen"].position(decile*1.5, decile*6.85)
 	volumeSliders["music"].position(decile, decile*3.5)
 	volumeSliders["sfx"].position(decile, decile*5.5)
 	pop()
 }
 
 function drawColourPicker() {
+	let alpha = (mode === "settings") ? 255 : 255 - (255 * factor(backSettingsStartTime, 500, "sine"))
 	let offset = windowWidth/2 - decile*3.75
 	push()
 	rectMode(CENTER)
 	strokeWeight(0)
-	fill(200)
+	fill(200, alpha)
 	rect(windowWidth/2 + offset, decile*5, decile*5, decile*7.5, decile/2)
 
-	fill(colourSliders["red"].value(), colourSliders["green"].value(), colourSliders["blue"].value())
+	fill(colourSliders["red"].value(), colourSliders["green"].value(), colourSliders["blue"].value(), alpha)
 	rect(windowWidth/2 + offset, decile*3.75, decile*4.5, decile*4.5, decile/3)
 
 	for (let slider in colourSliders) {colourSliders[slider].style(`width: 35vh; accent-color: ${slider}`)}
@@ -840,18 +850,18 @@ function drawColourPicker() {
 	colourSliders["blue"].position(windowWidth/2 + offset - decile*2.25, decile*7.25)
 
 	if (colourPickerMode) {
-		fill(102, 171, 42)
+		fill(102, 171, 42, alpha)
 		rect(windowWidth/2 + offset - decile*1.25, decile*8.15, decile*2, decile*0.85, decile/5)
-		fill(201, 1, 3)
+		fill(201, 1, 3, alpha)
 		rect(windowWidth/2 + offset + decile*1.25, decile*8.15, decile*2, decile*0.85, decile/5)
 
-		fill(50)
+		fill(50, alpha)
 		textSize(decile/2)
 		textAlign(CENTER)
 		text("Save", windowWidth/2 + offset - decile*1.25, decile*8.3)
 		text("Exit", windowWidth/2 + offset + decile*1.25, decile*8.3)
 	} else {
-		fill(50)
+		fill(50, alpha)
 		textSize(decile/2)
 		textAlign(CENTER)
 		text("Nothing Selected", windowWidth/2 + offset, decile*8.3)
@@ -860,11 +870,11 @@ function drawColourPicker() {
 
 	textAlign(CENTER, TOP)
 	textSize(decile/4)
-	fill(255, 0, 0)
+	fill(255, 0, 0, alpha)
 	text(colourSliders["red"].value(), windowWidth/2 + offset + decile*1.85, decile*6.25)
-	fill(0, 128, 0)
+	fill(0, 128, 0, alpha)
 	text(colourSliders["green"].value(), windowWidth/2 + offset + decile*1.85, decile*6.75)
-	fill(0, 0, 255)
+	fill(0, 0, 255, alpha)
 	text(colourSliders["blue"].value(), windowWidth/2 + offset + decile*1.85, decile*7.25)
 	pop()
 
@@ -935,9 +945,10 @@ function mouseClickedElement() {
 	}
 
 	if (clickedButton === "Back") { ///// If back button pressed
-		if (puzzleCounter !== false) {backPuzzlesStartTime = time; puzzleCounter = false}
+		if (puzzleCounter !== false) {backPuzzlesStartTime = time; puzzleCounter = false} // Sorry for this part
 		else if (mode === "game") {backTime = time}
 		else if (mode === "start") {backMenuStartTime = time}
+		else if (mode === "settings") {backSettingsStartTime = time}
 		else if (buttons.divs["top"].html() === "Secret") {backCreditsStartTime = time; buttons.divs["top"].html("Secret 2: Electric Boogaloo")}
 		mode = "menu"
 		backDebounce = false
@@ -1247,7 +1258,7 @@ function mousePressed() {
 					}
 
 					game.mode = "board"
-					game.updateAttributes(game.handleMove(...game.promoSquare, piece, false))
+					game.updateAttributes(game.handleMove(...game.promoSquare, piece, settingsBools["queen"].checked() ? (game.turn ? "Q" : "q") : false))
 				}
 			}
 		}
@@ -1348,14 +1359,14 @@ function mousePressed() {
 			}
 		}
 	} else if (mode === "settings") {
-		if (decile*2.4 <= mouseY && mouseY <= decile*3.9) {
+		if (decile*2.4 <= mouseY && mouseY <= decile*3.9) { // Primary Colour
 			if (windowWidth/2 - decile*1.75 <= mouseX && mouseX <= windowWidth/2 - decile*0.25) {
 				colourPickerMode = 1
 				colourSliders["red"].value(boardColours[0][0])
 				colourSliders["green"].value(boardColours[0][1])
 				colourSliders["blue"].value(boardColours[0][2])
 			} else if (windowWidth/2 + decile*0.25 <= mouseX && mouseX <= windowWidth/2 + decile*1.75) {
-				colourPickerMode = 2
+				colourPickerMode = 2 // Secondary Colour
 				colourSliders["red"].value(boardColours[1][0])
 				colourSliders["green"].value(boardColours[1][1])
 				colourSliders["blue"].value(boardColours[1][2])
@@ -1372,11 +1383,13 @@ function mousePressed() {
 			} else if (windowWidth/2 + colourOffset + decile*0.25 <= mouseX && mouseX <= windowWidth/2 + colourOffset + decile*2.25) {
 				colourPickerMode = 0
 			}
-		//rect(decile*0.75, decile*6.55, decile*4.75, decile*1.8, decile/10)
-
-		} else if (decile*0.75 <= mouseX && mouseX <= decile*5.5 && decile*6.55 <= mouseY && mouseY <= decile*8.35) {
+			//rect(decile*0.75, decile*7.35, decile*3.6, decile*1.25, decile/10)
+		// Reset Defaults Button
+		} else if (decile*0.75 <= mouseX && mouseX <= decile*4.35 && decile*7.35 <= mouseY && mouseY <= decile*8.6) {
 			boardColours = [[200, 200, 200], [160, 100, 60]]
 			for (let s in volumeSliders) {volumeSliders[s].value(1)}
+			settingsBools["legal"].checked(true)
+			settingsBools["queen"].checked(false)
 		}
 
 
@@ -1410,7 +1423,7 @@ function mouseReleased() {
 	} else if (mouseBuffer[2] === LEFT && (mouseBuffer[0] !== rank || mouseBuffer[1] !== file)) { // Handle Move
 		let piece = game.board[mouseBuffer[1] - 1][mouseBuffer[0] - 1]
 		if (game.getColour(piece) === game.turn && piece !== "#" && (game.turn ? game.whitePlayer : game.blackPlayer) === "Human") {
-			let move = game.handleMove(mouseBuffer[0], mouseBuffer[1], rank, file)
+			let move = game.handleMove(mouseBuffer[0], mouseBuffer[1], rank, file, settingsBools["queen"].checked() ? (game.turn ? "Q" : "q") : false)
 			if (move && game.mode !== "promo") {game.updateAttributes(move)}
 		} mouseBuffer = [false, false, false]
 	} else if (mouseBuffer[2] === LEFT && (mouseBuffer[0] === rank && mouseBuffer[1] === file)) { // Possible Move
@@ -1612,7 +1625,7 @@ class Chess { // Main Section of Code
 		this.drawHighlightSquares()
 		this.drawClickedSquares()
 		this.drawPosFromBoard()
-		this.showLegalMoves()
+		if (settingsBools["legal"].checked()) {this.showLegalMoves()}
 		this.drawArrowSquares()
 
 		if (puzzleCounter === false) {
