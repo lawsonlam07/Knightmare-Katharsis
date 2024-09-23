@@ -839,7 +839,6 @@ function drawColourPicker() {
 	strokeWeight(0)
 	fill(200, alpha)
 	rect(windowWidth/2 + offset, decile*5, decile*5, decile*7.5, decile/2)
-
 	fill(colourSliders["red"].value(), colourSliders["green"].value(), colourSliders["blue"].value(), alpha)
 	rect(windowWidth/2 + offset, decile*3.75, decile*4.5, decile*4.5, decile/3)
 
@@ -895,7 +894,6 @@ function generate960() {
 	arr960[rBishop] = "B"
 	arrNums = arrNums.filter(v => ![lBishop, rBishop].includes(v))
 	arr960[random(arrNums)] = "Q"
-
 	return arr960.join("")
 }
 
@@ -976,7 +974,6 @@ function mouseClickedElement() {
 				}
 			}, 750)
 		} else {menuDebounce = true}
-
 
 	} else if (menuDebounce && mode === "menu") {
 		menuDebounce = false
@@ -1292,7 +1289,6 @@ function mousePressed() {
 	} else if (mode === "start") {
 		//rect(windowWidth*0.21, decile*9.2, decile*3.75, decile*0.5, decile/8)
 		if (menuPreset[0] === "Custom" && windowWidth*0.21 - decile*1.875 <= mouseX && mouseX <= windowWidth*0.21 + decile*1.875 && decile*8.95 <= mouseY && mouseY <= decile*9.45) {customAdvanced = !customAdvanced}
-
 		if (menuDebounce && windowWidth*0.4225 <= mouseX && mouseX <= windowWidth*0.6225 && decile*7.75 <= mouseY && mouseY <= decile*9.55) {
 			menuDebounce = false // Start Button
 			sfx["click3"].play()
@@ -1472,7 +1468,6 @@ function keyPressed() {
 
 function botTest(plr1, plr2, num) {
 	wPlayer = plr1; bPlayer = plr2
-
 	if (gameCount < num) {
 		if (game.status !== "active") {
 			gameCount++
