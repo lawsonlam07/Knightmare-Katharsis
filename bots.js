@@ -1,18 +1,118 @@
 const {max, min, abs, floor, ceil, hypot} = Math
 const dist = (x1, y1, x2, y2) => hypot(x2-x1, y2-y1)
 const random = (arr) => arr[floor(Math.random()*arr.length)]
+
 let startFEN = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR"
 let promiseDB = true
+
+const book = [
+	["e4", "c5", "Nf3", "d6", "d4", "cxd4", "Nxd4", "Nf6", "Nc3", "a6", "Be3", "e5", "Nb3", "Be6", "f3"],
+	["e4", "c5", "Nf3", "d6", "d4", "cxd4", "Nxd4", "Nf6", "Nc3", "a6", "Be3", "e5", "Nb3", "Be6", "f3", "h5", "Qd2", "Nbd7", "Nd5", "Bxd5", "exd5", "g6", "Be2"],
+	["e4", "e5", "Nf3", "Nc6", "Bb5", "a6", "Ba4", "Nf6", "O-O", "Be7", "Re1", "b5", "Bb3", "d6", "c3", "O-O"],
+	["e4", "e5", "Nf3", "Nc6", "Bb5", "Nf6", "O-O", "Nxe4", "d4", "Nd6", "Bxc6", "dxc6", "dxe5", "Nf5", "Qxd8+", "Kxd8"],
+	["e4", "c5", "Nf3", "d6", "d4", "cxd4", "Nxd4", "Nf6", "Nc3", "a6", "Bg5", "e6", "f4", "Qb6", "Qd2", "Qxb2", "Rb1"],
+	["e4", "c5", "Nf3", "d6", "d4", "cxd4", "Nxd4", "Nf6", "Nc3", "a6", "Be2", "e5", "Nb3", "Be7", "Qd3", "O-O", "O-O", "Be6"],
+	["e4", "e5", "Nf3", "Nc6", "Bb5", "a6", "Ba4", "Nf6", "O-O", "Be7", "Re1", "b5", "Bb3", "d6", "c3", "O-O", "h3", "Nb8", "d4", "Nbd7", "Nbd2", "Bb7", "Bc2"],
+	["e4", "c5", "Nf3", "d6", "d4", "cxd4", "Nxd4", "Nf6", "Nc3", "a6", "Bg5", "e6", "f4", "Qb6", "Qd2", "Qxb2", "Rb1", "Qa3", "e5", "h6", "Bh4", "dxe5", "fxe5", "g5", "exf6", "gxh4", "Be2"],
+	["e4", "c5", "Nf3", "d6", "d4", "cxd4", "Nxd4", "Nf6", "Nc3", "a6", "Bg5", "Nc6", "Qd2", "e6", "O-O-O", "Bd7"],
+	["e4", "c5", "Nf3", "Nc6", "d4", "cxd4", "Nxd4", "Nf6", "Nc3", "e5", "Ndb5", "d6", "Bg5", "a6", "Na3"],
+	["e4", "e5", "Nf3", "Nc6", "Bb5", "a6", "Ba4", "Nf6", "O-O", "b5", "Bb3", "Bb7", "d3", "Be7", "Nc3", "d6"],
+	["e4", "e5", "Nf3", "Nc6", "Bb5", "Nf6", "O-O", "Nxe4", "d4", "Nd6", "Bxc6", "dxc6", "dxe5", "Nf5", "Qxd8+", "Kxd8", "Nc3", "Ke8", "Rd1", "Ne7", "h3", "Bf5", "Nd4", "Bg6"],
+	["e4", "c5", "Nf3", "d6", "d4", "cxd4", "Nxd4", "Nf6", "Nc3", "a6", "Be3", "e5", "Nb3", "Be6", "Be2", "Be7", "Nd5"],
+	["d4", "Nf6", "c4", "e6", "Nf3", "d5", "Nc3", "c6", "e3", "Nbd7", "Qc2", "Bd6", "Bd3", "O-O", "O-O", "dxc4"],
+	["e4", "e5", "Nf3", "Nc6", "Bb5", "a6", "Ba4", "Nf6", "O-O", "Be7", "Re1", "b5", "Bb3", "d6", "c3", "O-O", "h3", "Re8", "d4", "Bb7", "Nbd2", "exd4", "cxd4", "Nd7", "Nf1", "Na5", "Bc2"],
+	["e4", "c5", "Nf3", "d6", "d4", "cxd4", "Nxd4", "Nf6", "Nc3", "a6", "Be3", "Ng4", "Bg5", "h6", "Bh4", "g5", "Bg3"],
+	["e4", "c6", "d4", "d5", "Nc3", "dxe4", "Nxe4", "Bf5", "Ng3", "Bg6", "h4", "h6", "Nf3", "Nd7", "h5", "Bh7"],
+	["e4", "c5", "Nf3", "d6", "d4", "cxd4", "Nxd4", "Nf6", "Nc3", "a6", "f3", "e5", "Nb3", "Be6", "Be3", "h5", "Qd2", "Nbd7", "Be2"],
+	["d4", "Nf6", "c4", "e6", "Nf3", "d5", "Nc3", "c6", "e3", "Nbd7", "Bd3", "dxc4", "Bxc4", "b5", "Bd3", "Bb7"],
+	["d4", "Nf6", "c4", "e6", "Nf3", "d5", "Nc3", "c6", "Bg5", "h6", "Bh4", "dxc4", "e4", "g5", "Bg3", "b5"],
+	["e4", "c5", "Nf3", "d6", "d4", "cxd4", "Nxd4", "Nf6", "Nc3", "a6", "Be3", "e5", "Nb3", "Be6", "f3", "h5", "Qd2", "Nbd7", "Nd5", "Nxd5", "exd5", "Bf5", "Be2", "Qh4+", "Bf2", "Qf6", "Bd3", "Be7", "O-O"],
+	["e4", "c5", "Nf3", "d6", "d4", "cxd4", "Nxd4", "Nf6", "Nc3", "a6", "Be3", "e5", "Nb3", "Be7", "Be2", "Be6", "Nd5", "Nxd5", "exd5", "Bf5", "Qd2", "O-O", "O-O"],
+	["e4", "c5", "Nf3", "d6", "d4", "cxd4", "Nxd4", "Nf6", "Nc3", "a6", "Be3", "e5", "Nb3", "Be6", "f3", "Be7", "Qd2", "O-O", "O-O-O", "Nbd7", "g4", "b5", "g5", "Nh5", "Kb1", "Nb6", "Nd5", "Nxd5", "exd5", "Bf5", "Na5", "f6"],
+	["e4", "c5", "Nf3", "d6", "d4", "cxd4", "Nxd4", "Nf6", "Nc3", "g6", "Be3", "Bg7", "f3", "O-O", "Qd2", "Nc6"],
+	["e4", "c5", "Nf3", "d6", "d4", "cxd4", "Nxd4", "Nf6", "Nc3", "a6", "h3", "e6", "g4", "h6", "Bg2", "Be7", "Be3", "Nc6"],
+	["d4", "Nf6", "c4", "e6", "Nf3", "d5", "Nc3", "c6", "e3", "Nbd7", "Qc2", "Bd6", "Bd3", "O-O", "O-O", "dxc4", "Bxc4", "a6", "Rd1", "b5", "Bd3", "Bb7", "Ng5"],
+	["e4", "e5", "Nf3", "Nc6", "Bb5", "a6", "Ba4", "b5", "Bb3", "Nf6", "O-O", "Bb7", "d3", "Be7", "c4", "O-O", "Nc3", "bxc4", "Bxc4", "d6"],
+	["e4", "c5", "Nf3", "e6", "d4", "cxd4", "Nxd4", "Nc6", "Nc3", "Qc7", "Be2", "a6", "O-O", "Nf6", "Be3", "Bb4"],
+	["e4", "e6", "d4", "d5", "Nc3", "dxe4", "Nxe4", "Nf6", "Bg5", "Be7", "Bxf6", "gxf6", "Nf3", "f5", "Nc3", "a6"],
+	["e4", "c5", "Nf3", "d6", "d4", "cxd4", "Nxd4", "Nf6", "Nc3", "a6", "Be3", "e6", "f3", "b5", "Qd2", "Nbd7", "g4", "b4"],
+	["e4", "c5", "Nf3", "Nc6", "d4", "cxd4", "Nxd4", "Nf6", "Nc3", "e5", "Ndb5", "d6", "Bg5", "a6", "Na3", "b5", "Nd5", "Be7", "Bxf6", "Bxf6", "c3", "O-O", "Nc2", "Bg5", "a4", "bxa4", "Rxa4"],
+	["e4", "c5", "Nf3", "e6", "d4", "cxd4", "Nxd4", "Nc6", "Nc3", "Qc7", "Be2", "a6", "Be3", "Nf6", "O-O", "Bb4", "Na4", "Be7"],
+	["e4", "c6", "d4", "d5", "e5", "Bf5", "Nf3", "e6", "Be2", "Nd7", "O-O", "Ne7", "c3", "h6", "Nbd2", "Qc7"],
+	["e4", "c5", "Nf3", "d6", "d4", "cxd4", "Nxd4", "Nf6", "Nc3", "a6", "Be3", "e5", "Nb3", "Be6", "Be2", "Be7", "Qd3", "Nbd7", "Nd5", "O-O", "O-O", "Bxd5", "exd5", "Rc8"],
+	["e4", "c5", "Nf3", "d6", "d4", "cxd4", "Nxd4", "Nf6", "Nc3", "a6", "Bg5", "Nbd7", "f4", "e5", "Nf5", "Qb6", "Qd2"],
+	["e4", "e5", "Nf3", "Nc6", "Bb5", "a6", "Ba4", "b5", "Bb3", "Nf6", "O-O", "Bb7", "Re1", "Bc5", "c3", "Bb6"],
+	["e4", "c5", "Nf3", "e6", "d4", "cxd4", "Nxd4", "Nc6", "Nc3", "Nf6", "Ndb5", "d6", "Bf4", "e5", "Bg5", "a6"],
+	["e4", "e6", "d4", "d5", "Nc3", "Nf6", "e5", "Nfd7", "f4", "c5", "Nf3", "Nc6", "Be3", "a6", "Qd2", "b5"],
+	["e4", "c5", "Nf3", "d6", "d4", "cxd4", "Nxd4", "Nf6", "Nc3", "a6", "Be3", "e5", "Nb3", "Be6", "f3", "h5", "Qd2", "Nbd7", "a3", "Be7", "O-O-O", "b5", "Kb1", "Rc8", "h4", "O-O", "Bg5"],
+	["e4", "c5", "Nf3", "d6", "d4", "cxd4", "Nxd4", "Nf6", "Nc3", "a6", "Be3", "e5", "Nb3", "Be6", "f3", "Nbd7", "Qd2", "b5", "O-O-O", "Be7", "g4", "b4", "Nd5"],
+	["e4", "c5", "Nf3", "d6", "d4", "cxd4", "Nxd4", "Nf6", "Nc3", "a6", "Be3", "e5", "Nb3", "Be6", "f3", "h5", "Be2", "Nbd7", "Nd5", "Nxd5", "exd5", "Bf5"],
+	["e4", "c5", "Nf3", "d6", "d4", "cxd4", "Nxd4", "Nf6", "Nc3", "a6", "f3", "e5", "Nb3", "Be6", "Be3", "h5", "Qd2", "Nbd7", "Nd5", "Bxd5", "exd5", "g6", "Be2", "Bg7", "Na5", "Qc7", "O-O"],
+	["e4", "c6", "d4", "d5", "Nc3", "dxe4", "Nxe4", "Bf5", "Ng3", "Bg6", "h4", "h6", "Nf3", "Nd7", "h5", "Bh7", "Bd3", "Bxd3", "Qxd3", "e6", "Bf4", "Qa5+", "Bd2"],
+	["e4", "c5", "Nf3", "d6", "d4", "cxd4", "Nxd4", "Nf6", "Nc3", "Nc6", "Bg5", "e6", "Qd2", "a6", "O-O-O", "Bd7", "f4", "b5"],
+	["e4", "e5", "Nf3", "Nc6", "Bb5", "Bc5", "c3", "Nf6", "O-O", "O-O", "d4", "Bb6", "Bg5", "h6", "Bh4", "d6"],
+	["e4", "c5", "Nf3", "d6", "d4", "cxd4", "Nxd4", "Nf6", "Nc3", "a6", "Be3", "e6", "f3", "b5", "Qd2", "Nbd7", "g4", "b4", "Na4", "h6", "O-O-O", "Ne5", "Qxb4", "Bd7", "Bf4", "g5", "Bd2"],
+	["e4", "e5", "Nf3", "Nc6", "Bb5", "a6", "Ba4", "Nf6", "O-O", "Nxe4", "d4", "b5", "Bb3", "d5", "dxe5", "Be6"],
+	["e4", "e5", "Nf3", "Nf6", "Nxe5", "d6", "Nf3", "Nxe4", "d4", "d5", "Bd3", "Nc6", "O-O", "Be7", "c4", "Nb4"],
+	["e4", "c5", "Nf3", "Nc6", "d4", "cxd4", "Nxd4", "e5", "Nb5", "d6", "N1c3", "a6", "Na3", "b5", "Nd5", "Nf6"],
+	["d4", "Nf6", "c4", "e6", "Nf3", "d5", "Nc3", "c6", "Bg5", "h6", "Bxf6", "Qxf6", "e3", "Nd7", "Bd3", "dxc4"],
+	["d4", "Nf6", "Bf4", "d5", "e3", "c5", "Nd2", "e6", "Ngf3", "Nc6", "c3", "Bd6", "Bg3", "O-O", "Bd3", "b6", "Ne5", "Bb7", "f4"],
+	["d4", "Nf6", "c4", "e6", "Nf3", "b6", "g3", "Ba6", "b3", "Bb4+", "Bd2", "Be7", "Bg2", "c6", "Bc3", "d5"],
+	["e4", "e5", "Nf3", "Nc6", "Bb5", "a6", "Ba4", "Nf6", "O-O", "b5", "Bb3", "Bb7", "d3", "Be7", "Nc3", "d6", "a4", "Na5", "Ba2", "b4", "Ne2", "Rb8", "Ng3"],
+	["e4", "c5", "Nf3", "d6", "d4", "cxd4", "Nxd4", "Nf6", "Nc3", "a6", "Be2", "e5", "Nb3", "Be7", "Qd3", "O-O", "O-O", "Be6", "Be3", "Nbd7", "Nd5", "Bxd5", "exd5", "Rc8", "c4", "Ne8", "Qd2", "f5", "g3"],
+	["e4", "e5", "Nf3", "Nc6", "Bb5", "a6", "Ba4", "Nf6", "O-O", "b5", "Bb3", "Be7", "d4", "d6", "dxe5", "dxe5", "Qxd8+", "Bxd8", "a4", "b4"],
+	["c4", "e5", "Nc3", "Nf6", "g3", "d5", "cxd5", "Nxd5", "Bg2", "Nb6", "Nf3", "Nc6", "O-O", "Be7", "d3", "O-O"],
+	["e4", "e5", "Nf3", "Nc6", "Bb5", "a6", "Ba4", "Nf6", "O-O", "Be7", "Bxc6", "dxc6", "Nc3", "Bg4", "h3", "Bh5"],
+	["e4", "c5", "Nf3", "d6", "d4", "cxd4", "Nxd4", "Nf6", "Nc3", "a6", "Bg5", "Nc6", "Qd2", "e6", "O-O-O", "Bd7", "f4", "h6", "Bh4", "b5", "Bxf6", "gxf6", "Kb1", "Qb6"],
+	["e4", "e5", "Nf3", "Nc6", "Bb5", "Nf6", "O-O", "Nxe4", "Re1", "Nd6", "Bf1", "Be7", "Nxe5", "Nxe5", "Rxe5", "O-O"],
+	["e4", "c5", "Nf3", "d6", "d4", "cxd4", "Nxd4", "Nf6", "Nc3", "a6", "Be3", "e5", "Nb3", "Be6", "f3", "Be7", "Qd2", "h5", "Nd5", "Nxd5", "exd5", "Bf5", "Be2", "Bh4+", "g3", "Be7", "O-O-O", "Nd7"],
+	["e4", "e5", "Nf3", "Nc6", "Bb5", "Nf6", "d3", "Bc5", "c3", "O-O", "O-O", "d6", "Nbd2", "h6", "h3", "a6", "Bxc6", "bxc6"],
+	["e4", "e6", "d4", "d5", "Nc3", "Bb4", "e5", "Ne7", "a3", "Bxc3+", "bxc3", "c5", "Qg4", "O-O", "Bd3", "Nbc6"],
+	["e4", "c5", "Nf3", "e6", "d4", "cxd4", "Nxd4", "Nc6", "Nc3", "Qc7", "Be2", "a6", "Be3", "Nf6", "O-O", "Bb4", "Na4", "Be7", "Nxc6", "bxc6", "Nb6", "Rb8", "Nxc8", "Qxc8", "Bd4", "c5", "Be5"],
+	["c4", "e5", "Nc3", "Nf6", "Nf3", "Nc6", "g3", "d5", "cxd5", "Nxd5", "Bg2", "Nb6", "O-O", "Be7", "a3", "O-O"],
+	["e4", "e5", "Nf3", "Nc6", "Bb5", "a6", "Ba4", "Nf6", "O-O", "Be7", "Re1", "b5", "Bb3", "O-O", "a4", "Bb7", "d3"],
+	["e4", "c5", "Nf3", "d6", "d4", "cxd4", "Nxd4", "Nf6", "Nc3", "a6", "Be3", "e5", "Nb3", "Be6", "f3", "h5", "Nd5", "Nxd5", "exd5", "Bf5", "Bd3", "Bxd3", "Qxd3"],
+	["e4", "e6", "d4", "d5", "Nc3", "Nf6", "e5", "Nfd7", "f4", "c5", "Nf3", "Nc6", "Be3", "cxd4", "Nxd4", "Bc5", "Qd2", "O-O", "O-O-O"],
+	["d4", "Nf6", "c4", "e6", "Nf3", "d5", "Nc3", "c6", "e3", "Nbd7", "Bd3", "dxc4", "Bxc4", "b5", "Bd3", "Bb7", "O-O", "a6", "e4", "c5", "d5", "Qc7", "dxe6", "fxe6"],
+	["e4", "e5", "Nf3", "Nc6", "Bb5", "a6", "Bxc6", "dxc6", "O-O", "Bg4", "h3", "h5", "d3", "Qf6", "Nbd2", "Ne7"],
+	["e4", "c5", "Nf3", "d6", "d4", "cxd4", "Nxd4", "Nf6", "Nc3", "a6", "Be3", "Ng4", "Bg5", "h6", "Bh4", "g5", "Bg3", "Bg7", "h3", "Ne5", "f3", "Nbc6", "Bf2", "Ng6", "Qd2", "Nxd4", "Bxd4", "Bxd4", "Qxd4"],
+	["e4", "e5", "Nf3", "Nc6", "Bb5", "f5", "d3", "fxe4", "dxe4", "Nf6", "O-O", "Bc5", "Nc3", "d6", "Bg5", "O-O"],
+	["e4", "e5", "Nf3", "Nc6", "Bb5", "a6", "Ba4", "Nf6", "O-O", "b5", "Bb3", "Be7", "Re1", "O-O", "c3", "d5", "exd5", "Nxd5", "Nxe5", "Nxe5", "Rxe5", "c6", "d4", "Bd6", "Re1", "Qh4", "g3", "Qh3", "Qe2"],
+	["e4", "c5", "Nf3", "d6", "d4", "cxd4", "Nxd4", "Nf6", "Nc3", "a6", "Bg5", "Nbd7", "f4", "e5", "Nf5", "Qb6", "Qd2", "Qxb2", "Rb1", "Qa3", "fxe5", "dxe5", "Bc4", "Qa5", "O-O", "Qc5+", "Ne3"],
+	["d4", "Nf6", "c4", "g6", "Nc3", "d5", "cxd5", "Nxd5", "e4", "Nxc3", "bxc3", "Bg7", "Nf3", "c5", "Rb1", "O-O"],
+	["e4", "c5", "Nf3", "d6", "d4", "cxd4", "Nxd4", "Nf6", "Nc3", "a6", "f3", "e6", "Be3", "b5", "Qd2", "Nbd7", "O-O-O", "Bb7", "a3"],
+	["d4", "Nf6", "c4", "e6", "Nf3", "d5", "g3", "dxc4", "Bg2", "Nc6", "Qa4", "Bb4+", "Bd2", "Nd5", "Bxb4", "Ndxb4"],
+	["d4", "Nf6", "c4", "e6", "Nf3", "b6", "g3", "Ba6", "b3", "Bb4+", "Bd2", "Be7", "Bg2", "c6", "Bc3", "d5", "Ne5", "Nfd7", "Nxd7", "Nxd7", "Nd2", "O-O", "O-O"],
+	["d4", "Nf6", "Nf3", "d5", "c4", "e6", "Nc3", "c6", "Bg5", "h6", "Bh4", "dxc4", "e4", "g5", "Bg3", "b5", "Be2", "Bb7", "O-O"],
+	["e4", "c5", "Nf3", "e6", "d4", "cxd4", "Nxd4", "Nc6", "Nc3", "Qc7", "Be3", "a6", "Qd2", "Nf6", "O-O-O", "Bb4", "f3"],
+	["e4", "c5", "Nf3", "d6", "d4", "cxd4", "Nxd4", "Nf6", "Nc3", "a6", "Be3", "e5", "Nb3", "Be6", "Be2", "Be7", "Nd5", "Nxd5", "exd5", "Bf5", "Qd2", "O-O", "O-O", "Nd7", "Na5", "Qc7", "c4"],
+	["e4", "c5", "Nf3", "Nc6", "d4", "cxd4", "Nxd4", "g6", "Nc3", "Bg7", "Be3", "Nf6", "Bc4", "O-O", "Bb3", "d6"],
+	["e4", "c6", "c3", "d5", "e5", "Bf5", "d4", "e6", "Bd3", "Ne7", "Ne2", "Nd7", "O-O", "Bxd3", "Qxd3", "c5"],
+	["e4", "c5", "Nf3", "d6", "d4", "cxd4", "Nxd4", "Nf6", "Nc3", "a6", "Be3", "e5", "Nb3", "Be6", "Be2", "Nbd7", "Qd3", "Rc8", "a4", "Be7", "O-O", "O-O", "a5"],
+	["e4", "c5", "Nf3", "d6", "d4", "cxd4", "Nxd4", "Nf6", "Nc3", "a6", "Be2", "e5", "Nb3", "Be7", "Be3", "Be6", "Nd5", "Nxd5", "exd5", "Bf5", "O-O"],
+	["e4", "c5", "Nf3", "d6", "d4", "cxd4", "Nxd4", "Nf6", "Nc3", "a6", "h3", "e6", "g4", "b5", "Bg2", "Bb7", "O-O", "Nfd7"],
+	["e4", "c5", "Nf3", "d6", "d4", "cxd4", "Nxd4", "Nf6", "Nc3", "a6", "Be3", "Ng4", "Bg5", "h6", "Bh4", "g5", "Bg3", "Bg7", "h3", "Ne5", "Nf5", "Bxf5", "exf5", "Nbc6", "Nd5", "O-O", "Be2", "e6", "fxe6", "fxe6", "Ne3", "d5"],
+	["e4", "c5", "Nf3", "d6", "d4", "cxd4", "Nxd4", "Nf6", "Nc3", "a6", "Be2", "e5", "Nb3", "Be7", "Qd3", "O-O", "O-O", "Be6", "Nd5", "Nxd5", "exd5", "Bc8", "Be3", "Nd7", "a4", "f5", "c4"],
+	["d4", "d5", "c4", "c6", "Nf3", "Nf6", "Nc3", "e6", "Bg5", "h6", "Bh4", "dxc4", "e4", "g5", "Bg3", "b5", "Be2", "Bb7", "O-O", "Nbd7"],
+	["e4", "c5", "Nf3", "Nc6", "d4", "cxd4", "Nxd4", "e5", "Nb5", "d6", "N1c3", "a6", "Na3", "b5", "Nd5", "Nf6", "Bg5", "Be7", "Bxf6", "Bxf6", "c3", "Rb8", "Nc2", "Bg5"],
+	["e4", "c5", "Nf3", "d6", "d4", "cxd4", "Nxd4", "Nf6", "Nc3", "a6", "Be3", "e5", "Nf3", "Be7", "Bc4", "O-O", "O-O", "Be6", "Bxe6"],
+	["e4", "c5", "Nf3", "d6", "d4", "cxd4", "Nxd4", "Nf6", "Nc3", "a6", "Bg5", "Nbd7", "f4", "Qb6", "Qd2", "e5", "Nf5", "Qxb2", "Rb1", "Qa3", "fxe5", "dxe5", "Bc4", "Qa5", "O-O", "Qc5+", "Ne3", "b5"],
+	["e4", "c5", "Nf3", "d6", "d4", "cxd4", "Nxd4", "Nf6", "Nc3", "a6", "Bc4", "e6", "O-O", "b5", "Bb3", "Be7", "Qf3", "Qb6"],
+	["e4", "g6", "d4", "Bg7", "Nc3", "d5", "Nxd5", "c6", "Nf4", "Qxd4", "Qxd4", "Bxd4", "Bc4", "Nf6", "Nf3", "Bb6"],
+	["d4", "d5", "c4", "c6", "Nf3", "Nf6", "Nc3", "dxc4", "a4", "Bf5", "Ne5", "Nbd7", "Nxc4", "Qc7", "g3", "e5"],
+	["d4", "d5", "c4", "c6", "Nf3", "Nf6", "Nc3", "e6", "Bg5", "h6", "Bh4", "dxc4", "e4", "g5", "Bg3", "b5", "Be2", "Bb7", "h4", "g4", "Ne5", "Nbd7", "Bxg4", "Nxe5", "Bxe5", "Rg8", "Bf3"],
+	["d4", "d5", "c4", "c6", "Nf3", "e6", "Nc3", "dxc4", "a4", "Bb4", "e3", "b5", "Bd2", "a5", "axb5", "Bxc3"],
+	["e4", "g6", "d4", "Bg7", "Nc3", "d6", "f4", "Nf6", "Nf3", "O-O", "Bd3", "Na6", "O-O", "c5", "d5", "Rb8"],
+	["d4", "d5", "c4", "c6", "Nf3", "Nf6", "Nc3", "dxc4", "a4", "Bf5", "Ne5", "Nbd7", "Nxc4", "Qc7", "g3", "e5", "dxe5", "Nxe5", "Bf4", "Nfd7", "Bg2", "f6", "O-O"],
+	["Nf3", "Nf6", "c4", "e6", "Nc3", "c5", "g3", "b6", "Bg2", "Bb7", "O-O", "Be7", "d4", "cxd4", "Qxd4", "d6", "Bg5"],
+	["Nf3", "Nf6", "c4", "c5", "Nc3", "e6", "g3", "d5", "cxd5", "exd5", "d4", "Nc6", "Bg2", "Be7", "O-O", "c4"]
+]
 
 onmessage = (v) => {
 	let plr = v.data[0], args = v.data[1]
 	switch (plr) {
 		case "Fortuna":
 			new Fortuna(...args).makeMove()
-			break
-
-		case "Equinox":
-			new Equinox(...args).makeMove()
 			break
 			
 		case "Astor":
@@ -125,330 +225,6 @@ class Chess { // Main Section of Code
 			x1 += xIncre; y1 += yIncre
 			tweenSquares.push([x1, y1])
 		} return tweenSquares
-	}
-
-	////////// Front End - User Interface //////////
-
-	draw() { // Where it all happens...
-		// this.highlightSquares = this.bitboards[this.bitboards.length-1]["q"]
-		if (this.status === "active") {
-			if (this.turn) {this.whiteTime = max(this.whiteTime - (time - this.moveTime), 0)}
-			else {this.blackTime = max(this.blackTime - (time - this.moveTime), 0)}
-			if ((this.turn ? this.whiteTime : this.blackTime) === 0) {
-				if (this.materialCheck(this.getMatList()[this.turn ? 1 : 0])) {
-					this.status = ["Game drawn: Timeout vs Insufficient Material", "Draw"]
-				} else {
-					this.status = ["Game won by Timeout", !this.turn]
-				}
-			}
-		} this.moveTime = time
-
-		if (this.whitePlayer !== "Human" && this.start) {
-			this.start = false
-			let args = [this.copyBoard(this.board), this.copyBitboard(this.bitboards[this.bitboards.length-1]), [...this.canCastle[this.canCastle.length-1]], this.passantHistory[this.passantHistory.length-1], this.turn, this.move]
-			botApi.postMessage([(this.turn ? this.whitePlayer : this.blackPlayer), args])
-		}
-
-		push()
-		stroke(0, 0)
-		this.drawShadow()
-		this.drawBoard()
-		this.drawHighlightSquares()
-		this.drawClickedSquares()
-		this.drawPosFromBoard()
-		this.showLegalMoves()
-		this.drawArrowSquares()
-		this.drawTimer()
-		this.drawIcons()
-		this.drawUtility()
-		this.drawPieceDeficit()
-		if ((windowWidth/windowHeight) >= 1.85) {this.drawNotation()}
-		if (this.mode === "promo") {this.promotionUI()}
-		if (!["active", "finish"].includes(this.status)) {this.drawEndScreen()}
-		pop()
-	}
-
-	drawEndScreen() {
-		push()
-		rectMode(CENTER)
-		textAlign(CENTER, CENTER)
-
-		stroke(25)
-		strokeWeight(4)
-		rect(decile*5, decile*5, decile*6, decile*4, decile/2)
-		strokeWeight(0)
-
-		fill(150, 100, 215)
-		rect(decile*5, decile*5, decile*6, decile*4, decile/2)
-		fill(100)
-		rect(decile*5, decile*5, decile*6, decile*2)
-
-		strokeWeight(5)
-		fill(255)
-		stroke(...(this.status[1] === "Draw" ? [150] : (this.status[1] ? [59, 162, 17] : [228, 8, 10])))
-		rect(decile*3, decile*5, decile, decile, decile/10)
-		fill(0)
-		stroke(...(this.status[1] === "Draw" ? [150] : (!this.status[1] ? [59, 162, 17] : [228, 8, 10])))
-		rect(decile*7, decile*5, decile, decile, decile/10)
-		strokeWeight(0)
-
-		push()
-		fill(225, 50, 60)
-		stroke(0)
-		strokeWeight(1)
-		textFont("Arial")
-		textSize(decile)
-		text("×", decile*7.5, decile*3.6)
-		pop()
-		textSize(decile/2)
-
-		text((this.status[1] === "Draw" ? "Game Drawn" : (this.status[1] ? "White Wins" : "Black Wins")), decile*5, decile*3.5)
-		textSize(decile/4)
-		text(this.status[0], decile*5, decile*6.5, decile*6)
-
-		stroke(0)
-		strokeWeight(1)
-		fill(255)
-
-		push()
-		textSize(decile/3)
-		rotate(HALF_PI)
-		text(this.blackPlayer.toUpperCase(), decile*5, -decile*6)
-		rotate(PI)
-		text(this.whitePlayer.toUpperCase(), -decile*5, decile*4)
-		pop()
-
-		textSize(decile)
-		strokeWeight(2)
-		fill(100)
-		text((this.status[1] === "Draw" ? "=" : (this.status[1] ? "/" : "\\")), decile*5, decile*4.8)
-		pop()
-	}
-
-	drawBoard() {
-		for (let x = 1; x <= 8; x++) {
-			for (let y = 1; y <= 8; y++) {
-				let rgb = (x+y) % 2 !== 0 ? [100, 50, 175] : [200, 150, 255]
-				fill(...rgb)
-				square((x*decile), (y*decile), decile)
-			}
-		}	
-	}
-
-	drawTimer() {
-		push()
-		rectMode(CENTER)
-		textAlign(CENTER)
-		textSize(windowHeight*(12.5/100))
-		let whiteTimePos = this.flip ? 6.3 : 4.6
-		let blackTimePos = this.flip ? 4.6 : 6.3
-		let alpha = mode === "game" ? 255 : 255 - (255 * factor(backTime, 500, "sine"))
-		fill(200, alpha)
-		rect(11.4*decile, 5*decile, 4*decile, 0.1*decile, decile)
-		fill(...this.whiteTime >= 59000 ? [200] : [255, 51, 0], alpha)
-		text(this.convertTime(Math.ceil(this.whiteTime/1000)), 11.4*decile, whiteTimePos*decile)
-		fill(...this.blackTime >= 59000 ? [200] : [255, 51, 0], alpha)
-		text(this.convertTime(Math.ceil(this.blackTime/1000)), 11.4*decile, blackTimePos*decile)
-		pop()
-	}
-
-	drawIcons() {
-		push()
-		let alpha = mode === "game" ? 255 : 255 - (255 * factor(backTime, 500, "sine"))
-		textAlign(CENTER)
-		textSize(windowHeight/10)
-		fill(200, alpha)
-		tint(255, alpha)
-		let whiteTextPos = this.flip ? 8.85 : 1.85
-		let blackTextPos = this.flip ? 1.85 : 8.85
-		let whiteIconPos = this.flip ? 8 : 1
-		let blackIconPos = this.flip ? 1 : 8
-		textAlign(CORNER)
-		text(this.whitePlayer, decile*9.25, decile*whiteTextPos)
-		text(this.blackPlayer, decile*9.25, decile*blackTextPos)
-		// image(icons[this.whitePlayer], decile*12.5, decile*whiteIconPos, decile, decile)
-		// image(icons[this.blackPlayer], decile*12.5, decile*blackIconPos, decile, decile)
-
-		// text(this.whitePlayer, decile*12, decile*whiteTextPos)
-		// text(this.blackPlayer, decile*12, decile*blackTextPos)
-		// image(icons[this.whitePlayer], decile*9.35, decile*whiteIconPos, decile, decile)
-		// image(icons[this.blackPlayer], decile*9.35, decile*blackIconPos, decile, decile)
-		pop()
-	}
-
-	drawPieceDeficit() {
-		// push()
-		// imageMode(CENTER)
-		// image(pieces["q"], 11.4*decile, 7.25*decile, decile*1.25, decile*1.25)
-		// pop()
-	} // Finish later innit
-
-	drawUtility() {
-		push()
-		let alpha = mode === "game" ? 255 : 255 - (255 * factor(backTime, 500, "sine"))
-		textSize(windowHeight/10)
-		fill(200, alpha)
-		rectMode(CORNER)
-		rect(windowWidth*0.65, windowHeight*0.05, decile, decile, decile/4)
-		rect(windowWidth*0.7, windowHeight*0.05, decile, decile, decile/4)
-		rect(windowWidth*0.75, windowHeight*0.05, decile, decile, decile/4)
-		rect(windowWidth*0.8, windowHeight*0.05, decile, decile, decile/4)
-
-
-		textFont("Arial")
-		fill(50, alpha)
-		textAlign(CENTER)
-		text("⟳", windowWidth*0.65+decile/2, windowHeight*0.135)
-		text("⮐", windowWidth*0.7+decile/2, windowHeight*0.15)
-		text("⇅", windowWidth*0.75+decile/2, windowHeight*0.135)
-		text("🗎", windowWidth*0.8+decile/2, windowHeight*0.135)
-		pop()
-	}
-
-	drawNotation() {
-		push()
-		fill(200)
-		rectMode(CENTER)
-		textAlign(CENTER)
-		textSize(windowHeight*(5/100))
-		let maxDisplay = floor(((windowHeight*0.8)/decile)/0.75 - 2.5)
-		let offset = max(0, ceil(this.move/2) - maxDisplay)
-		let alpha = mode === "game" ? 255 : 255 - (255 * factor(backTime, 500, "sine"))
-		let buttonWidth = decile * 15.25 + (windowWidth - decile * 1.75)
-		let _buttonWidth = decile * 15.25 - (windowWidth - decile * 1.75)
-		push()
-		textStyle(BOLD)
-		textSize(windowHeight*(15/100))
-		fill(200, alpha)
-		rect(buttonWidth/2 + _buttonWidth*0.5625, decile*(0.75*maxDisplay + 2.5), _buttonWidth*0.33, decile, decile/5)
-		rect(buttonWidth/2 + _buttonWidth*0.1875, decile*(0.75*maxDisplay + 2.5), _buttonWidth*0.33, decile, decile/5)
-		rect(buttonWidth/2 - _buttonWidth*0.1875, decile*(0.75*maxDisplay + 2.5), _buttonWidth*0.33, decile, decile/5)
-		rect(buttonWidth/2 - _buttonWidth*0.5625, decile*(0.75*maxDisplay + 2.5), _buttonWidth*0.33, decile, decile/5)
-		fill(50, alpha)
-		text("«", buttonWidth/2 + _buttonWidth*0.5625, decile*(0.75*maxDisplay + 2.95))
-		text("‹", buttonWidth/2 + _buttonWidth*0.1875, decile*(0.75*maxDisplay + 2.95))
-		text("›", buttonWidth/2 - _buttonWidth*0.1875, decile*(0.75*maxDisplay + 2.95))
-		text("»", buttonWidth/2 - _buttonWidth*0.5625, decile*(0.75*maxDisplay + 2.95))
-		pop()
-
-		let pairs = []
-		for (let i = 0; i < this.moveHistory.length; i += 2) {
-			pairs.push([this.moveHistory[i], this.moveHistory[i+1]])
-		}
-
-		for (let i = offset; i < min(pairs.length, offset + maxDisplay); i++) {
-			let [w, b] = pairs[i]
-			let isWhiteCurrentMove = this.move === 2*(i+1) - 1
-			let isBlackCurrentMove = this.move === 2*(i+1)
-
-			fill(isWhiteCurrentMove ? 225 : 200, alpha)
-			textSize(windowHeight*((isWhiteCurrentMove ? 5.5 : 5)/100))
-			text(w, decile * 15.25, decile * (0.75*(i-offset)+2.5))
-
-			fill(isBlackCurrentMove ? 225 : 200, alpha)
-			textSize(windowHeight*((isBlackCurrentMove ? 5.5 : 5)/100))
-			text(b, windowWidth - decile * 1.75, decile * (0.75*(i-offset)+2.5))
-
-			fill(isWhiteCurrentMove || isBlackCurrentMove ? 255 : 200, alpha)
-			textSize(windowHeight*(6/100))
-			text(i+1, (decile * 15.25 + (windowWidth - decile * 1.75))/2, decile * (0.75*(i-offset)+2.5))
-		}
-		pop()
-	}
-
-	drawShadow() {
-		push()
-		fill(0, 200)
-		rectMode(CORNER)
-		square(decile*1.125, decile*1.125, decile*8)
-		pop()
-	}
-
-	drawHighlightSquares() {
-		fill(235, 64, 52, 200)
-		for (let [x, y] of this.highlightSquares) {
-			if (!this.flip) {[x, y] = [9-x, 9-y]}
-			square(x*decile, y*decile, decile)
-		}
-	}
-
-	drawClickedSquares() {
-		fill(173, 163, 83, 200)
-		if (mouseBuffer[2] === true || (mouseIsPressed === true && mouseButton === LEFT) && mouseBuffer[0]) {
-			if (this.flip) {square(mouseBuffer[0] * decile, mouseBuffer[1] * decile, decile)}
-			else {square((9 - mouseBuffer[0]) * decile, (9 - mouseBuffer[1]) * decile, decile)}
-		}
-	}
-
-	drawPosFromBoard() {
-		let board = this.boardHistory[this.move]
-		let ghostX = false
-		let ghostY = false
-		for (let x = 1; x <= 8; x++) {
-			for (let y = 1; y <= 8; y++) {
-				let arrX = this.flip ? y-1 : 8-y
-				let arrY = this.flip ? x-1 : 8-x
-				if (board[arrX][arrY] !== "#") {
-					if ([LEFT, true].includes(mouseBuffer[2]) && arrY+1 === mouseBuffer[0] && arrX+1 === mouseBuffer[1] && mouseIsPressed) {
-						ghostX = arrX
-						ghostY = arrY
-					} else {
-						image(pieces[board[arrX][arrY]], x*decile, y*decile, decile, decile)					
-					}
-				}
-			}
-		} if (ghostX !== false && ghostY !== false) {
-			push()
-			imageMode(CENTER)
-			image(pieces[board[ghostX][ghostY]], mouseX, mouseY, decile, decile)
-			pop()	
-		}
-	}
-
-	drawArrow(x1, y1, x2, y2, ghost=false) {
-		if (!this.flip && !ghost) {[x1, y1, x2, y2] = [10-x1, 10-y1, 10-x2, 10-y2]}
-		else if (!this.flip && ghost) {[x1, y1] = [10-x1, 10-y1]}
-		let hypotenuse = dist(x1, y1, x2, y2)
-		let angle = atan((y1-y2) / (x1-x2))
-		let xAvg = (x1+x2)/2
-		let yAvg = (y1+y2)/2
-	
-		circle(x2 * decile, y2 * decile, decile/3)
-		circle(x2 * decile, y2 * decile, decile/2)
-	
-		push()
-		translate(xAvg * decile, yAvg * decile)
-		rotate(angle)
-		translate(-xAvg * decile, -yAvg * decile)
-		rect(xAvg * decile, yAvg * decile, hypotenuse * decile + decile/4, decile/4, decile/8)
-		pop()
-	}
-
-	drawArrowSquares() {
-		fill(235, 64, 52, 200)
-		rectMode(CENTER)
-		for (let [x1, y1, x2, y2] of this.arrowSquares) {
-			this.drawArrow(x1, y1, x2, y2)
-		}
-		if (mouseBuffer[2] === RIGHT && mouseIsPressed === true && mouseButton === RIGHT && mouseBuffer[0]) {
-			this.drawArrow(mouseBuffer[0]+0.5, mouseBuffer[1]+0.5, mouseX/decile, mouseY/decile, true)
-		}
-	}
-
-	promotionUI() {
-		let queen = this.turn ? "Q" : "q"
-		let rook = this.turn ? "R" : "r"
-		let knight = this.turn ? "N" : "n"
-		let bishop = this.turn ? "B" : "b"
-		push()
-		imageMode(CENTER)
-		fill(66, 135, 245, 200)
-		rect(5*decile, 5*decile, 2.5*decile, 2.5*decile, 0.5*decile)
-		pop()
-		image(pieces[queen], 4*decile, 4*decile, decile, decile)
-		image(pieces[rook], 5*decile, 4*decile, decile, decile)
-		image(pieces[knight], 4*decile, 5*decile, decile, decile)
-		image(pieces[bishop], 5*decile, 5*decile, decile, decile)
 	}
 
 	////////// Back End - Move Validation //////////
@@ -708,7 +484,7 @@ class Chess { // Main Section of Code
 				legalMoves.push([v[0], v[1]])
 			}
 		} return legalMoves
-	} // FIX CHESS960 HERE <--------------------------------------!!!!!!!
+	}
 
 	handleMove(x1, y1, x2, y2, promo=false, query=false) {
 		let piece = this.board[y1-1][x1-1]
@@ -829,7 +605,7 @@ class Chess { // Main Section of Code
 				notation += "+"; if (!query) {sfx["check"].play()}
 			} return [activeBoard, castleArr, locator, notation, passantSquare]
 		} return false
-	} // FIX CHESS960 HERE <--------------    return [{0}activeBoard, {1}castleArr, {2}locator, {3}notation, {4}passantSquare]
+	} // return [{0}activeBoard, {1}castleArr, {2}locator, {3}notation, {4}passantSquare]
 
 	isCheck(x1, y1, colour, locator, activeBoard) {
 		let opposingKing = locator[colour ? "k" : "K"][0]
@@ -874,7 +650,7 @@ class Chess { // Main Section of Code
 		} return false
 	}
 
-	resetBoard() {console.log("hi"); this.status = "killed"; game = new Chess(startFEN, players[wPlayer-1], players[bPlayer-1], this.timeToMs(timeInputs["wMins"].value(), timeInputs["wSecs"].value()), this.timeToMs(timeInputs["bMins"].value(), timeInputs["bSecs"].value()), timeInputs["wIncr"].value()*1000, timeInputs["bIncr"].value()*1000)}
+	resetBoard() {this.status = "killed"; game = new Chess(startFEN, players[wPlayer-1], players[bPlayer-1], this.timeToMs(timeInputs["wMins"].value(), timeInputs["wSecs"].value()), this.timeToMs(timeInputs["bMins"].value(), timeInputs["bSecs"].value()), timeInputs["wIncr"].value()*1000, timeInputs["bIncr"].value()*1000)}
 
 	undoMove(query = false) {
 		if ((promiseDB || query) && this.moveHistory.length !== 0) {
@@ -929,7 +705,7 @@ class Fortuna extends Chess {
 	}
 }
 
-class Equinox extends Fortuna {
+class Astor extends Fortuna {
 	constructor(_board, _bitboards, _canCastle, _passantHistory, _turn, _move) {
 		super(_board, _bitboards, _canCastle, _passantHistory, _turn, _move)
 		this.pieceValues = {"P": 1, "N": 3, "B": 3, "R": 5, "Q": 9}
@@ -981,26 +757,140 @@ class Equinox extends Fortuna {
  	}
 }
 
-class Astor extends Equinox {
-	constructor(_board, _bitboards, _canCastle, _passantHistory, _turn, _move) {
-		super(_board, _bitboards, _canCastle, _passantHistory, _turn, _move)
-	}
-
-	makeMove() {
-		return new Promise((resolve) => {
-			resolve(null)
-		})
-	}
-}
-
 class Lazaward extends Astor {
 	constructor(_board, _bitboards, _canCastle, _passantHistory, _turn, _move) {
 		super(_board, _bitboards, _canCastle, _passantHistory, _turn, _move)
+		this.pieceSquareBoards = {
+			"P": [
+				[   0,   0,   0,   0,   0,   0,   0,   0],
+				[   0,   0,   0,   0,   0,   0,   0,   0],
+				[   0,   0,   0,   0,   0,   0,   0,   0],
+				[   0,   0,   0,   0,   0,   0,   0,   0],
+				[   0,   0,   0, 0.5, 0.5,   0,   0,   0],
+				[ 0.4, 0.4,   0, 0.2, 0.2,   0, 0.4, 0.4],
+				[ 0.5, 0.5, 0.5,   0,   0, 0.5, 0.5, 0.5],			
+				[   0,   0,   0,   0,   0,   0,   0,   0]
+			],
+			
+			"N": [
+				[   0,   0,   0,   0,   0,   0,   0,   0],
+				[   0,   0,   0,   0,   0,   0,   0,   0],
+				[   0,   0,   0,   0,   0,   0,   0,   0],
+				[   0,   0,   0,   0,   0,   0,   0,   0],
+				[   0,   0,   0,   0,   0,   0,   0,   0],
+				[   0, 0.5,0.45,   0,   0, 0.5, 0.5,   0],
+				[   0,   0,   0,   0,   0,   0,   0,   0],
+				[   0,   0,   0,   0,   0,   0,   0,   0]
+			],
+
+			"B": [
+				[   0,   0,   0,   0,   0,   0,   0,   0],
+				[   0,   0,   0,   0,   0,   0,   0,   0],
+				[   0,   0,   0,   0,   0,   0,   0,   0],
+				[   0,0.65,   0,   0,   0,   0,0.65,   0],
+				[   0,   0, 0.6,   0,   0, 0.6,   0,   0],
+				[   0,   0,-0.5,-0.2,-0.2,-0.5,   0,   0],
+				[   0, 0.6, 0.2, 0.1, 0.1, 0.2, 0.6,   0],
+				[   0,   0,   0,   0,   0,   0,   0,   0]
+			],
+
+			"R": [
+				[   0,   0,   0,   0,   0,   0,   0,   0],
+				[   0,   0,   0,   0,   0,   0,   0,   0],
+				[   0,   0,   0,   0,   0,   0,   0,   0],
+				[   0,   0,   0,   0,   0,   0,   0,   0],
+				[   0,   0,   0,   0,   0,   0,   0,   0],
+				[   0,   0,   0,   0,   0,   0,   0,   0],
+				[   0,   0,   0,   0,   0,   0,   0,   0],
+				[   0,   0,   0, 0.5, 0.5, 0.5,   0,   0]
+			],
+
+			"Q": [
+				[   0,   0,   0,   0,   0,   0,   0,   0],
+				[   0,   0,   0,   0,   0,   0,   0,   0],
+				[   0,   0,   0,   0,   0,   0,   0,   0],
+				[   0,   0,   0,   0,   0,   0,   0,   0],
+				[   0,   0,   0,   0,   0,   0,   0,   0],
+				[   0,   0,   0,   0,   0,-0.2,   0,   0],
+				[   0,   0,   0,   0,   0,   0,   0,   0],
+				[   0,   0,   0,   0,   0,   0,   0,   0]
+			],
+
+			"K": [
+				[-0.5,-0.5,-0.5,-0.5,-0.5,-0.5,-0.5,-0.5],
+				[-0.4,-0.4,-0.4,-0.4,-0.4,-0.4,-0.4,-0.4],
+				[-0.3,-0.3,-0.3,-0.3,-0.3,-0.3,-0.3,-0.3],
+				[-0.2,-0.2,-0.2,-0.2,-0.2,-0.2,-0.2,-0.2],
+				[-0.1,-0.1,-0.1,-0.1,-0.1,-0.1,-0.1,-0.1],
+				[   0,   0,   0,   0,   0,   0,   0,   0],
+				[ 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1],
+				[ 0.2, 0.9,0.75,0.25, 0.5, 0.2, 0.9, 0.2]
+			]
+		}
+	}
+
+	evaluate() {
+		let totalDist = 0
+		let pieces = ["P", "N", "B", "R", "Q", "K"]
+		if (this.moveCounter <= 25) {
+			for (let p of pieces) {
+				for (let [x1, y1] of this.bitboards[this.bitboards.length-1][p]) {
+					totalDist += this.pieceSquareBoards[p][x1-1][y1-1]
+				}				
+			}
+			for (let p of pieces.map(v => v.toLowerCase())) {
+				for (let [x1, y1] of this.bitboards[this.bitboards.length-1][p]) {
+					totalDist -= this.pieceSquareBoards[p.toUpperCase()][8-x1][8-y1]
+				}
+			}
+		}
+
+		let [wMats, bMats] = this.getMatList()
+		wMats = wMats.map(v => this.pieceValues[v.toUpperCase()]).reduce((total, v) => total + v, 0)
+		bMats = bMats.map(v => this.pieceValues[v.toUpperCase()]).reduce((total, v) => total + v, 0)
+		let matDiff = wMats - bMats
+
+		return (matDiff + totalDist) * (this.turn ? 1 : -1)
+	}
+
+	search(depth, alpha=-Infinity, beta=Infinity) {
+		if (depth === 0) {return this.evaluate()}
+
+		let moves = this.getAllLegalMoves()
+		let kingPos = this.bitboards[this.bitboards.length-1][this.turn ? "K" : "k"][0]
+		if (moves.length === 0) {
+			if (this.isCheck(...kingPos, this.turn, this.bitboards[this.bitboards.length-1], this.board)) {
+				return -Infinity // Checkmate
+			} return 0 // Stalemate
+		}
+
+		for (let move of moves) {
+			this.updateAttributes(this.handleMove(...move, true))
+			let evaluation = -this.search(depth-1, -beta, -alpha)
+			this.undoMove(true)
+			if (evaluation >= beta) {
+				return beta
+			} alpha = max(alpha, evaluation)
+		}
+
+		return alpha
 	}
 
 	makeMove() {
 		return new Promise((resolve) => {
-			resolve(null)
+			let moves = this.getAllLegalMoves()
+			let moveEvals = []
+	
+			for (let move of moves) {
+				this.updateAttributes(this.handleMove(...move, true))
+				moveEvals.push(-this.search(2))
+				this.undoMove(true)
+			}
+	
+			let bestEval = max(...moveEvals)
+			let bestIndices = moveEvals.map((v, i) => {if (v === bestEval) {return i}}).filter(v => v !== undefined)
+	
+			postMessage(moves[random(bestIndices)])
 		})
 	}
 }
@@ -1010,9 +900,45 @@ class Aleph extends Lazaward {
 		super(_board, _bitboards, _canCastle, _passantHistory, _turn, _move)
 	}
 
+	evaluate() {
+		let totalDist = 0
+		let pieces = ["P", "N", "B", "R", "Q", "K"]
+		if (this.moveCounter <= 25) {
+			for (let p of pieces) {
+				for (let [x1, y1] of this.bitboards[this.bitboards.length-1][p]) {
+					totalDist += this.pieceSquareBoards[p][x1-1][y1-1]
+				}				
+			}
+			for (let p of pieces.map(v => v.toLowerCase())) {
+				for (let [x1, y1] of this.bitboards[this.bitboards.length-1][p]) {
+					totalDist -= this.pieceSquareBoards[p.toUpperCase()][8-x1][8-y1]
+				}
+			}
+		}
+
+		let [wMats, bMats] = this.getMatList()
+		wMats = wMats.map(v => this.pieceValues[v.toUpperCase()]).reduce((total, v) => total + v, 0)
+		bMats = bMats.map(v => this.pieceValues[v.toUpperCase()]).reduce((total, v) => total + v, 0)
+		let matDiff = wMats - bMats
+
+		return (matDiff + totalDist) * (this.turn ? 1 : -1)
+	}
+
 	makeMove() {
 		return new Promise((resolve) => {
-			resolve(null)
+			let moves = this.getAllLegalMoves()
+			let moveEvals = []
+	
+			for (let move of moves) {
+				this.updateAttributes(this.handleMove(...move, true))
+				moveEvals.push(-this.search(2))
+				this.undoMove(true)
+			}
+	
+			let bestEval = max(...moveEvals)
+			let bestIndices = moveEvals.map((v, i) => {if (v === bestEval) {return i}}).filter(v => v !== undefined)
+	
+			postMessage(moves[random(bestIndices)])
 		})
 	}
 }
