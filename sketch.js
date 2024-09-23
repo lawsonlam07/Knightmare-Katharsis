@@ -122,15 +122,15 @@ function preload() {
 	}
 	songs = {
 		"Kirara Magic - Checkmate": loadSound("Songs/Checkmate.mp3"),
-		// "KLYDIX - Dream Flower": loadSound("Songs/Dream Flower.mp3"),
-		// "Tobu - Escape": loadSound("Songs/Escape.mp3"),
-		// "Xomu - Last Dance": loadSound("Songs/Last Dance.mp3"),
-		// "Sakuzyo - Lost Memory": loadSound("Songs/Lost Memory.mp3"),
-		// "EspiDev - Parfait": loadSound("Songs/Parfait.mp3"),
-		// "PIKASONIC - Relive": loadSound("Songs/Relive.mp3"),
-		// "megawolf77 - Shining Sprinter": loadSound("Songs/Shining Sprinter.mp3"),
-		// "F-777 - Stay Tuned": loadSound("Songs/Stay Tuned.mp3"),
-		// "BuildCastlesInAir - Untitled Song": loadSound("Songs/Untitled Song.mp3")
+		"KLYDIX - Dream Flower": loadSound("Songs/Dream Flower.mp3"),
+		"Tobu - Escape": loadSound("Songs/Escape.mp3"),
+		"Xomu - Last Dance": loadSound("Songs/Last Dance.mp3"),
+		"Sakuzyo - Lost Memory": loadSound("Songs/Lost Memory.mp3"),
+		"EspiDev - Parfait": loadSound("Songs/Parfait.mp3"),
+		"PIKASONIC - Relive": loadSound("Songs/Relive.mp3"),
+		"megawolf77 - Shining Sprinter": loadSound("Songs/Shining Sprinter.mp3"),
+		"F-777 - Stay Tuned": loadSound("Songs/Stay Tuned.mp3"),
+		"BuildCastlesInAir - Untitled Song": loadSound("Songs/Untitled Song.mp3")
 	}
 	correctImg = loadImage("Icons/correct.png")
 	incorrectImg = loadImage("Icons/incorrect.png")
