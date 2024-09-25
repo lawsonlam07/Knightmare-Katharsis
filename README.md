@@ -1,7 +1,7 @@
 # Chess AI Project
 
 You can play the final game here:
-> https://pararcana.itch.io/chess-ai
+> https://pararcana.itch.io/knightmare-katharsis
 
 ---
 
