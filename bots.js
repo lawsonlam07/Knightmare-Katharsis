@@ -4,6 +4,8 @@ const random = (arr) => arr[floor(Math.random()*arr.length)]
 
 let startFEN = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR"
 let promiseDB = true
+let mode = "Standard"
+
 
 const book = [
 	["e4", "c5", "Nf3", "d6", "d4", "cxd4", "Nxd4", "Nf6", "Nc3", "a6", "Be3", "e5", "Nb3", "Be6", "f3"],
@@ -108,8 +110,12 @@ const book = [
 	["Nf3", "Nf6", "c4", "c5", "Nc3", "e6", "g3", "d5", "cxd5", "exd5", "d4", "Nc6", "Bg2", "Be7", "O-O", "c4"]
 ]
 
+
 onmessage = (v) => {
 	let plr = v.data[0], args = v.data[1]
+	mode = v.data[2]
+
+
 	switch (plr) {
 		case "Fortuna":
 			new Fortuna(...args).makeMove()
@@ -129,7 +135,7 @@ onmessage = (v) => {
 	}
 }
 
-class Chess { // Main Section of Code
+class Chess { // Like Chess in sketch.js, but cut down.
 	constructor(fen, wPlayer="Human", bPlayer="Human", wTime=600000, bTime=600000, wIncr=0, bIncr=0, activeColour=true, castleArr=[true, true, true, true], targetSquare=[false, false], halfMoves=0) {
 		this.boardHistory = [this.initiateBoard(fen)]
 		this.bitboards = [this.getBitboards(fen)]
@@ -188,10 +194,6 @@ class Chess { // Main Section of Code
 			} else {x += Number(char)}
 		} return bitboards
 	}
-
-	convertTime(time) {return `${Math.floor(time/60)}:${(abs(time%60)).toLocaleString('en-US', {minimumIntegerDigits: 2})}`}
-
-	timeToMs(mins, secs) {return mins*60000 + secs*1000}
 
 	getNotation(x, y) {return `${String.fromCharCode(96+x)}${9-y}`}
 
@@ -298,20 +300,6 @@ class Chess { // Main Section of Code
 		}
 	}
 
-	showLegalMoves() {
-		if ((mouseBuffer[2] || (mouseIsPressed && mouseButton === LEFT) && mouseBuffer[0]) && this.mode === "board" && (this.turn ? this.whitePlayer : this.blackPlayer) === "Human") {
-			let target = this.board[mouseBuffer[1]-1][mouseBuffer[0]-1]
-			if ([LEFT, true].includes(mouseBuffer[2]) && (this.getColour(target)) === this.turn) {
-				push()
-				fill(66, 135, 245, 100)
-				for (let [x, y] of this.getLegalMoves(mouseBuffer[0], mouseBuffer[1])) {
-					if (!this.flip) {[x, y] = [9-x, 9-y]}
-					circle((x + 0.5) * decile, (y + 0.5) * decile, decile/3)
-				} pop()
-			}
-		}
-	}
-
 	getAllLegalMoves() {
 		let pieces = ["P", "N", "B", "R", "Q", "K"]
 		if (!this.turn) {pieces = pieces.map(v => v.toLowerCase())}
@@ -319,7 +307,7 @@ class Chess { // Main Section of Code
 
 		for (let p of pieces) {
 			for (let [x1, y1] of this.bitboards[this.bitboards.length-1][p]) {
-				for (let [x2, y2] of this.getLegalMoves(x1, y1)) {
+				for (let [x2, y2] of this.getLegalMoves(x1, y1)[0]) {
 					if (p.toUpperCase() === "P" && y2 === (this.turn ? 1 : 8)) { // Pawn Promo
 						moves.push([x1, y1, x2, y2, this.turn ? "Q" : "q"])
 						moves.push([x1, y1, x2, y2, this.turn ? "R" : "r"])
@@ -329,23 +317,6 @@ class Chess { // Main Section of Code
 				}
 			}
 		} return moves
-	}
-
-	moveTest(depth, prev="") {
-		let moves = this.getAllLegalMoves()
-		let positions = 0
-		if (depth === 0) {return 1}
-
-		for (let v of moves) {
-			let args = this.handleMove(...v, true)
-			this.updateAttributes(args)
-			positions += this.moveTest(depth-1, args[3])
-			this.undoMove(true)
-			//if(prev==="a4") {console.log(args[3])}
-		}
-
-		//console.log(positions, prev)
-		return positions
 	}
 
 	getHorizontalMoves(x1, y1) {
@@ -404,6 +375,7 @@ class Chess { // Main Section of Code
 		let colour = this.getColour(piece)
 		let pseudoLegalMoves = []
 		let legalMoves = []
+		let moveNotations = []
 		switch(piece.toUpperCase()) {
 			case "P":
 				let double = colour ? 7 : 2
@@ -482,8 +454,9 @@ class Chess { // Main Section of Code
 			let newBoard = this.handleMove(x1, y1, v[0], v[1], false, true)
 			if (!this.isCheck(...newBoard[2][colour ? "K" : "k"][0], colour, newBoard[2], newBoard[0])) {
 				legalMoves.push([v[0], v[1]])
+				moveNotations.push(newBoard[3])
 			}
-		} return legalMoves
+		} return [legalMoves, moveNotations]
 	}
 
 	handleMove(x1, y1, x2, y2, promo=false, query=false) {
@@ -492,7 +465,7 @@ class Chess { // Main Section of Code
 		let activeBoard = this.copyBoard(this.board)
 		let castleArr = [...this.canCastle[this.canCastle.length-1]]
 
-		let moves = query ? [[x2, y2]] : this.getLegalMoves(x1, y1)
+		let moves = query ? [[x2, y2]] : this.getLegalMoves(x1, y1)[0]
 		let colour = this.getColour(piece)
 		let notation = piece.toUpperCase() === "P" ? "" : piece.toUpperCase()
 		let passantSquare = [false, false]
@@ -508,7 +481,7 @@ class Chess { // Main Section of Code
 				let repeat = false
 
 				for (let [x, y] of pieceLocator) { // Notation stuff
-					let perms = this.getLegalMoves(x, y)
+					let perms = this.getLegalMoves(x, y)[0]
 					if (perms.some(v => v[0] === x2 && v[1] === y2)) { // If the move is possible with another piece.
 						repeat = true
 						disambiguateX.push(x)
@@ -650,8 +623,6 @@ class Chess { // Main Section of Code
 		} return false
 	}
 
-	resetBoard() {this.status = "killed"; game = new Chess(startFEN, players[wPlayer-1], players[bPlayer-1], this.timeToMs(timeInputs["wMins"].value(), timeInputs["wSecs"].value()), this.timeToMs(timeInputs["bMins"].value(), timeInputs["bSecs"].value()), timeInputs["wIncr"].value()*1000, timeInputs["bIncr"].value()*1000)}
-
 	undoMove(query = false) {
 		if ((promiseDB || query) && this.moveHistory.length !== 0) {
 			this.turn = !this.turn
@@ -670,19 +641,6 @@ class Chess { // Main Section of Code
 			this.blackTime = this.blackTimeHistory[this.blackTimeHistory.length-1]
 			this.board = this.copyBoard(this.boardHistory[this.boardHistory.length-1])
 		}
-	}
-
-	printMoves() {
-		let moves = document.createElement("textarea")
-		let moveList = []
-		for (let i = 0; i < this.moveHistory.length; i += 2) {
-			moveList.push(`${Math.floor(i/2)+1}. ${this.moveHistory.slice(i, i + 2).join(" ")}`)
-		}
-		document.body.appendChild(moves)
-		moves.value = moveList.join(" ")
-		moves.select()
-		document.execCommand("copy")
-		moves.remove()
 	}
 }
 
@@ -896,19 +854,44 @@ class Lazaward extends Astor {
 }
 
 class Aleph extends Lazaward {
-	constructor(_board, _bitboards, _canCastle, _passantHistory, _turn, _move) {
+	constructor(_board, _bitboards, _canCastle, _passantHistory, _turn, _move, _moveHistory, _timeRemaining) {
 		super(_board, _bitboards, _canCastle, _passantHistory, _turn, _move)
+		this.moveHistory = [..._moveHistory]
+		this.timeRemaining = _timeRemaining
+	}
+
+	getAllLegalMoves(notation=false) { // Redo to get move notation.
+		let pieces = ["P", "N", "B", "R", "Q", "K"]
+		if (!this.turn) {pieces = pieces.map(v => v.toLowerCase())}
+		let moves = []
+		let notations = []
+
+		for (let p of pieces) {
+			for (let [x1, y1] of this.bitboards[this.bitboards.length-1][p]) {
+				let pieceMoves = this.getLegalMoves(x1, y1)
+				notations = notations.concat(pieceMoves[1])
+				for (let [x2, y2] of pieceMoves[0]) {
+					if (p.toUpperCase() === "P" && y2 === (this.turn ? 1 : 8)) { // Pawn Promo
+						moves.push([x1, y1, x2, y2, this.turn ? "Q" : "q"])
+						moves.push([x1, y1, x2, y2, this.turn ? "R" : "r"])
+						moves.push([x1, y1, x2, y2, this.turn ? "B" : "b"])
+						moves.push([x1, y1, x2, y2, this.turn ? "N" : "n"])
+					} else {moves.push([x1, y1, x2, y2, false])}
+				}
+			}
+		} if (notation) {return [moves, notations]}; return moves
 	}
 
 	evaluate() {
 		let totalDist = 0
 		let pieces = ["P", "N", "B", "R", "Q", "K"]
-		if (this.moveCounter <= 25) {
+		if (this.moveCounter <= 40) {
 			for (let p of pieces) {
 				for (let [x1, y1] of this.bitboards[this.bitboards.length-1][p]) {
 					totalDist += this.pieceSquareBoards[p][x1-1][y1-1]
 				}				
 			}
+
 			for (let p of pieces.map(v => v.toLowerCase())) {
 				for (let [x1, y1] of this.bitboards[this.bitboards.length-1][p]) {
 					totalDist -= this.pieceSquareBoards[p.toUpperCase()][8-x1][8-y1]
@@ -917,28 +900,76 @@ class Aleph extends Lazaward {
 		}
 
 		let [wMats, bMats] = this.getMatList()
+		let pieceCount = wMats.concat(bMats).length
 		wMats = wMats.map(v => this.pieceValues[v.toUpperCase()]).reduce((total, v) => total + v, 0)
 		bMats = bMats.map(v => this.pieceValues[v.toUpperCase()]).reduce((total, v) => total + v, 0)
 		let matDiff = wMats - bMats
+
+
+		if (pieceCount <= 5) { // King distance
+			let wKpos = this.bitboards[this.bitboards.length-1]["K"][0]
+			let bKpos = this.bitboards[this.bitboards.length-1]["k"][0]
+			if (matDiff * (this.turn ? 1 : -1) > 0) {
+				totalDist -= dist(...wKpos, ...bKpos)
+			} else {
+				totalDist += dist(...wKpos, ...bKpos)
+			}
+		}
 
 		return (matDiff + totalDist) * (this.turn ? 1 : -1)
 	}
 
 	makeMove() {
 		return new Promise((resolve) => {
-			let moves = this.getAllLegalMoves()
+			let [moves, notations] = this.getAllLegalMoves(true)
 			let moveEvals = []
-	
-			for (let move of moves) {
-				this.updateAttributes(this.handleMove(...move, true))
-				moveEvals.push(-this.search(2))
-				this.undoMove(true)
+			let order = [[], [], [], []]
+			let bookIndex = -1
+			let target
+
+			let validBook = JSON.parse(JSON.stringify(book))
+			for (let i = 0; i < this.moveHistory.length; i++) {
+				let e = this.moveHistory[i]
+				validBook = validBook.filter(v => v[i] === e)
 			}
-	
-			let bestEval = max(...moveEvals)
-			let bestIndices = moveEvals.map((v, i) => {if (v === bestEval) {return i}}).filter(v => v !== undefined)
-	
-			postMessage(moves[random(bestIndices)])
+
+			if (validBook.length) {
+				target = random(validBook)[this.moveHistory.length]
+				bookIndex = notations.indexOf(target)
+			}
+
+			if (validBook.length && mode === "Standard" && bookIndex !== -1) {
+				setTimeout(() => {
+					postMessage(moves[bookIndex])
+				}, 300)
+			} else {
+				for (let i = 0; i < moves.length; i++) { // Move ordering
+					let v = moves[i]
+					if (v.includes("+") && v.includes("x")) {
+						order[0].push(i)
+					} else if (v.includes("x")) {
+						order[1].push(i)
+					} else if (v.includes("+")) {
+						order[2].push(i)
+					} else {
+						order[3].push(i)
+					}
+				}
+				
+				order = order[0].concat(order[1].concat(order[2].concat(order[3])))
+
+				for (let v of order) {
+					let move = moves[v]
+					this.updateAttributes(this.handleMove(...move, true))
+					moveEvals.push(-this.search(this.timeRemaining >= 180000 ? 3 : 2))
+					this.undoMove(true)
+				}
+		
+				let bestEval = max(...moveEvals)
+				let bestIndices = moveEvals.map((v, i) => {if (v === bestEval) {return i}}).filter(v => v !== undefined)
+		
+				postMessage(moves[random(bestIndices)])
+			}
 		})
 	}
 }
