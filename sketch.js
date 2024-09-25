@@ -303,6 +303,12 @@ function setup() {
 
 function draw() {
 	if (mode !== "start") {for (let v in customMenu) {customMenu[v].position(-windowWidth, 0)}}
+	if (time >= clickedTime + transitionDuration) {
+		transitionDivs["div1"].position(0, 0)
+		transitionDivs["div1"].size(0, 0)
+		transitionDivs["div2"].position(0, 0)
+		transitionDivs["div2"].size(0, 0)
+	}
 	resizeCanvas(windowWidth, windowHeight)
 
 	clear()
@@ -795,10 +801,6 @@ function drawSettings() {
 
 	fill(250, 50, 50, alpha) // Reset Defaults Button
 	rect(decile*0.75, decile*7.35, decile*3.6, decile*1.25, decile/10)
-	// fill(155); stroke(155); strokeWeight(2)
-	// triangle(decile*0.75, decile*7.6, decile*0.75, decile*8.35, decile*1.75, decile*8.35)
-	// triangle(decile*5.5, decile*7.2, decile*5.5, decile*6.55, decile*4.5, decile*6.55)
-	// strokeWeight(0)
 
 	textSize(decile/2)
 	textAlign(LEFT)
@@ -853,7 +855,6 @@ function drawColourPicker() {
 		rect(windowWidth/2 + offset - decile*1.25, decile*8.15, decile*2, decile*0.85, decile/5)
 		fill(201, 1, 3, alpha)
 		rect(windowWidth/2 + offset + decile*1.25, decile*8.15, decile*2, decile*0.85, decile/5)
-
 		fill(50, alpha)
 		textSize(decile/2)
 		textAlign(CENTER)
@@ -865,7 +866,6 @@ function drawColourPicker() {
 		textAlign(CENTER)
 		text("Nothing Selected", windowWidth/2 + offset, decile*8.3)
 	}
-
 
 	textAlign(CENTER, TOP)
 	textSize(decile/4)
@@ -949,6 +949,7 @@ function mouseClickedElement() {
 		else if (mode === "settings") {backSettingsStartTime = time}
 		else if (buttons.divs["top"].html() === "Secret") {backCreditsStartTime = time; buttons.divs["top"].html("Secret 2: Electric Boogaloo")}
 		mode = "menu"
+		game.status = "killed"
 		backDebounce = false
 		sfx["back"].play()
 		if (buttons.divs["top"].html() !== "Play") {
@@ -1003,7 +1004,6 @@ function mouseClickedElement() {
 				setTimeout(() => {
 					menuDebounce = true // Bring back back button
 					backButton.style("width: 14vw; left: 85vw; opacity: 0.9; background-color: #4A4A4A")
-
 					if (clickedButton === "Puzzles") {
 						puzzlesStartTime = time
 						puzzlesFinish = false
@@ -1046,7 +1046,6 @@ function mouseClickedElement() {
 			
 			setTimeout(() => { // Fade out | part, sine | START MENU
 				mode = "start"
-
 				timeInputs["wMins"].value("10"); timeInputs["wSecs"].value("00"); timeInputs["wIncr"].value("0")
 				timeInputs["bMins"].value("10"); timeInputs["bSecs"].value("00"); timeInputs["bIncr"].value("0")
 				wPlayer = 1; bPlayer = 1
@@ -1202,15 +1201,14 @@ function getRankandFileFromMouse(x, y) {
 		let file = floor(y/decile)
 		if (!game.flip) {rank = 9 - rank; file = 9 - file}
 		return [rank, file]
-	}
-	return [false, false]
+	} return [false, false]
 }
 
 function convertAlgebraic(coord) {
     coord = coord.toLowerCase()
     let x = coord.slice(0).charCodeAt() - 96
     let y = 9 - Number(coord.slice(1))
-    
+
     if (max(x, y) > 8 || min(x, y) < 1 || coord.length !== 2 || isNaN(y)) {
         return [false, false]
     } return [x, y]
@@ -1475,8 +1473,7 @@ function botTest(plr1, plr2, num) {
 				results[game.status[0]]++
 			} else {
 				results[game.status[0]] = 1
-			}
-			game.resetBoard()
+			} game.resetBoard()
 		}
 	} console.log(results)
 }
@@ -1606,11 +1603,11 @@ class Chess { // Main Section of Code
 			}
 		} this.moveTime = time
 
-		if (this.whitePlayer !== "Human" && this.start) {
+		if (this.whitePlayer !== "Human" && this.start && this.status !== "killed") {
 			this.start = false
 			promiseDB = false
-			let args = [this.copyBoard(this.board), this.copyBitboard(this.bitboards[this.bitboards.length-1]), [...this.canCastle[this.canCastle.length-1]], this.passantHistory[this.passantHistory.length-1], this.turn, this.move]
-			botApi.postMessage([(this.turn ? this.whitePlayer : this.blackPlayer), args])
+			let args = [this.copyBoard(this.board), this.copyBitboard(this.bitboards[this.bitboards.length-1]), [...this.canCastle[this.canCastle.length-1]], this.passantHistory[this.passantHistory.length-1], this.turn, this.move, [...this.moveHistory], (this.turn ? this.whiteTime : this.blackTime)]
+			botApi.postMessage([(this.turn ? this.whitePlayer : this.blackPlayer), args, menuPreset[0]])
 		}
 
 		push()
@@ -1629,7 +1626,7 @@ class Chess { // Main Section of Code
 			this.drawUtility()
 			if ((windowWidth/windowHeight) >= 1.85) {this.drawNotation()}
 			if (this.mode === "promo") {this.promotionUI()}
-			if (!["active", "finish"].includes(this.status)) {this.drawEndScreen()}
+			if (!["active", "finish", "killed"].includes(this.status) && mode === "game") {this.drawEndScreen()}
 		}
 		pop()
 	}
@@ -1954,8 +1951,8 @@ class Chess { // Main Section of Code
 				}
 			} else if (this.status === "active" && (this.turn ? this.whitePlayer : this.blackPlayer) !== "Human" && this.mode !== "promo") {
 				promiseDB = false
-				let args = [this.copyBoard(this.board), this.copyBitboard(this.bitboards[this.bitboards.length-1]), [...this.canCastle[this.canCastle.length-1]], this.passantHistory[this.passantHistory.length-1], this.turn, this.move]
-				botApi.postMessage([(this.turn ? this.whitePlayer : this.blackPlayer), args])
+				let args = [this.copyBoard(this.board), this.copyBitboard(this.bitboards[this.bitboards.length-1]), [...this.canCastle[this.canCastle.length-1]], this.passantHistory[this.passantHistory.length-1], this.turn, this.move, [...this.moveHistory], (this.turn ? this.whiteTime : this.blackTime)]
+				botApi.postMessage([(this.turn ? this.whitePlayer : this.blackPlayer), args, menuPreset[0]])
 			}
 		} else if (puzzleCounter !== false) {
 			// incorrect solution
@@ -2362,7 +2359,10 @@ class Chess { // Main Section of Code
 	}
 
 	resetBoard() {
-		this.status = "killed"; game = new Chess(startFEN, players[wPlayer-1], players[bPlayer-1], this.timeToMs(timeInputs["wMins"].value(), timeInputs["wSecs"].value()), this.timeToMs(timeInputs["bMins"].value(), timeInputs["bSecs"].value()), timeInputs["wIncr"].value()*1000, timeInputs["bIncr"].value()*1000)
+		if (promiseDB) {
+			this.status = "killed"
+			game = new Chess(startFEN, players[wPlayer-1], players[bPlayer-1], this.timeToMs(timeInputs["wMins"].value(), timeInputs["wSecs"].value()), this.timeToMs(timeInputs["bMins"].value(), timeInputs["bSecs"].value()), timeInputs["wIncr"].value()*1000, timeInputs["bIncr"].value()*1000)
+		}
 	}
 
 	undoMove(query = false) {
