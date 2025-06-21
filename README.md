@@ -1,4 +1,4 @@
-# Chess AI Project
+# Knightmare Katharsis
 
 You can play the final game here:
 > https://lawsonlam.itch.io/knightmare-katharsis
